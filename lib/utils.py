@@ -1,5 +1,6 @@
 import time
 import json
+import chardet
 from six.moves import cPickle as pickle
 
 
@@ -41,6 +42,26 @@ def load_pkl(_path):
 def write_pkl(_path, data):
     with open(_path, 'wb') as f:
         pickle.dump(data, f)
+
+
+def decode_2_utf8(string):
+    if isinstance(string, str):
+        return string
+    if isinstance(string, int) or isinstance(string, float):
+        return str(string)
+    if not isinstance(string, bytes):
+        return string
+
+    try:
+        return string.decode('utf-8')
+    except:
+        encoding = chardet.detect(string)['encoding']
+        if encoding:
+            try:
+                return string.decode(encoding)
+            except:
+                pass
+        return string
 
 
 def output_and_log(file_path, output):

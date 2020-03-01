@@ -1,196 +1,163 @@
 import os
 import numpy as np
-from gensim import corpora
 from matplotlib import pyplot as plt
-from config import path, date
+from config import path
 from lib import utils
 
-name_map = {
-    'buy_client': 'BfC',
-    'sell_client': 'StC',
-    'buy_dealer': 'BfD',
-    'sell_dealer': 'StD',
-    'clients': 'BfC+StC',
-    'dealers': 'BfD+StD',
-    '': 'all',
-}
+data = []
 
-dir_name = 'bonds_by_dealer'
-dealer_index = '1347'
-no_below = 20
-size_times = 1
-force_no_direction = False
+dir_path = os.path.join(path.PREDICTION_DIR, 'bonds_by_dealer', '2015')
 
+save_dir_path = os.path.join(path.ROOT_DIR, 'runtime', 'hist_for_interval')
+transaction_count_levels = ['100_1k', '1k_10k', '10k_100k', '100k_1m']
+for dir_name in transaction_count_levels:
+    new_dir_path = os.path.join(save_dir_path, dir_name)
+    if not os.path.isdir(new_dir_path):
+        os.mkdir(new_dir_path)
 
-dir_path = os.path.join(path.PREDICTION_DATE_DIR, dir_name, '2015', f'dealer_{dealer_index}')
-name = dir_name.replace('bonds_by_dealer_', '').replace('bonds_by_dealer', '')
-name = name_map[name]
+print('traversing data ... ')
 
+file_list = os.listdir(dir_path)
+length = len(file_list)
+for i, file_name in enumerate(file_list):
+    if i % 20 == 0:
+        progress = float(i + 1) / length * 100.
+        print('\rprogress: %.2f%% ' % progress, end='')
 
-def __load_dir(_dir_path):
-    """
-    Load all the data in "dir_path", and complement the data in the dates that no transaction happened
-    :return
-        data: (list)
-        e.g. [ # include transactions happen in many days
-            ['bond_a', 'bond_b', ...], # represent transaction happen in one day
-            ['bond_a', 'bond_b', ...],
-            ...
-        ]
-    """
-    _data = []
+    dealer_index = str(file_name.split('.')[0]).split('_')[1]
+    if dealer_index == '0':
+        continue
 
-    # load the date list
-    date_list = os.listdir(_dir_path)
-    date_list.sort()
+    tmp_data = utils.load_json(os.path.join(dir_path, file_name))
 
-    # generate a date dict so that we can check whether there is transaction happens in that date
-    date_dict = utils.list_2_dict(date_list)
+    d_bonds = {}
+    for i, v in enumerate(tmp_data):
+        bond_id = v[0]
+        if bond_id not in d_bonds:
+            d_bonds[bond_id] = []
+        d_bonds[bond_id].append(v[2])
 
-    # find out the start and end date of all the transactions
-    start_date = date_list[0][len('doc_'): -len('.json')]
-    end_date = date_list[-1][len('doc_'): -len('.json')]
+    l_bonds = []
+    for bond_id, date_list in d_bonds.items():
+        date_list.sort()
+        first_date = date_list[0][:-9]
+        last_date = date_list[-1][:-9]
 
-    # covert the date to timestamp
-    cur_timestamp = utils.date_2_timestamp(start_date)
-    end_timestamp = utils.date_2_timestamp(end_date) + 86000
+        first_date_timestamp = utils.date_2_timestamp(first_date)
+        last_date_timestamp = utils.date_2_timestamp(last_date)
+        interval = int((last_date_timestamp - first_date_timestamp) / 86400)
+        if interval > 0:
+            interval += 1
 
-    # traverse all the date between the start date and the end date, but skip the holidays
-    while cur_timestamp < end_timestamp:
-        _date = utils.timestamp_2_date(cur_timestamp)
-        file_name = f'doc_{_date}.json'
+        l_dates = list(map(lambda x: x[:-9], date_list))
+        l_dates = list(set(l_dates))
+        count = len(l_dates)
+        if interval == 0:
+            count = 0
 
-        # check if there is any transaction
-        if file_name in date_dict:
-            file_path = os.path.join(_dir_path, file_name)
+        count_divide_interval = min(float(count) / interval, 1.0) if interval > 0 else 0
 
-            # remove nan in doc
-            tmp_doc = utils.load_json(file_path)
-            tmp_doc = list(map(lambda x: x if isinstance(x[0], str) else '', tmp_doc))
-            while '' in tmp_doc:
-                tmp_doc.remove('')
-            _data.append(tmp_doc)
+        l_bonds.append([bond_id, interval, count_divide_interval, count])
 
-        # if it is holidays, then skip it
-        elif date.is_holiday(_date):
-            pass
+    intervals = list(map(lambda x: x[1], l_bonds))
+    count_divide_intervals = list(map(lambda x: x[2], l_bonds))
+    counts = list(map(lambda x: x[-1], l_bonds))
 
-        # if no transaction happens in that date
-        else:
-            _data.append([])
+    mean_interval = np.mean(intervals)
+    mean_count_divide_interval = np.mean(count_divide_intervals)
+    mean_count = np.mean(counts)
+    bond_size = len(d_bonds)
+    transaction_count = len(tmp_data)
 
-        # move to the next day
-        cur_timestamp += 86400
+    print(f'\n\ndealer: {dealer_index}')
+    print(f'mean_interval: {mean_interval}')
+    print(f'mean_count_divide_interval: {mean_count_divide_interval}')
+    print(f'mean_count: {mean_count}')
+    print(f'bond_size: {bond_size}')
+    print(f'transaction_count: {transaction_count}')
 
-    return _data
+    tmp_save_dir = ''
+    if transaction_count < 100:
+        print('continue because of small transaction count')
+        continue
+    elif transaction_count < 1000:
+        tmp_save_dir = os.path.join(save_dir_path, '100_1k')
+    elif transaction_count < 10000:
+        tmp_save_dir = os.path.join(save_dir_path, '1k_10k')
+    elif transaction_count < 100000:
+        tmp_save_dir = os.path.join(save_dir_path, '10k_100k')
+    elif transaction_count < 1000000:
+        tmp_save_dir = os.path.join(save_dir_path, '100k_1m')
 
+    print(f'tmp_save_dir: {os.path.split(tmp_save_dir)[1]}')
 
-print(f'loading from dir {dir_path} ...\n')
-data = __load_dir(dir_path)
-# data = utils.load_json(file_path)
+    plt.figure(figsize=(20., 20 * 4.8 / 10.4))
+    bins = list(range(0, 320, 10))
+    bins.insert(1, 1)
+    hist, _ = np.histogram(intervals, bins=bins)
+    max_y = int(np.max(hist))
+    y_unit = int(np.ceil(max_y / 20.))
+    max_y = int((np.ceil(max_y / float(y_unit)) + 1) * y_unit)
+    plt.hist(intervals, bins=bins)
+    plt.title(f'histogram of interval length of dealer {dealer_index}\nrange(0, 310, 10)')
+    plt.xlabel('interval length')
+    plt.ylabel('numbers')
+    plt.xticks(bins)
+    plt.yticks(np.arange(0, max_y, y_unit))
+    img_name = f'dealer_{dealer_index}_hist_of_interval_length.png'
+    file_path = os.path.join(tmp_save_dir, img_name)
+    plt.savefig(file_path, dpi=300)
+    # plt.show()
+    plt.close()
 
-doc_list = list(map(lambda x: list(map(lambda a: a[0], x)) if x else x, data))
+    plt.figure(figsize=(20., 20 * 4.8 / 10.4))
+    max_x = 1.0
+    min_x = 0.0
+    x_unit = 0.05
+    bins = list(np.arange(min_x, max_x + x_unit, x_unit))
+    bins.insert(1, 0.01)
+    hist, _ = np.histogram(count_divide_intervals, bins=bins)
+    max_y = int(np.max(hist))
+    y_unit = int(np.ceil(max_y / 20.))
+    max_y = int((np.ceil(max_y / float(y_unit)) + 1) * y_unit)
+    plt.hist(count_divide_intervals, bins=bins)
+    range_str = 'range(0, 1, 0.05)'
+    plt.title(
+        f'histogram of count_divide_intervals of dealer {dealer_index}\n{range_str}')
+    plt.xlabel('count divide intervals')
+    plt.ylabel('numbers')
+    x_ticks = list(np.arange(min_x, max_x + x_unit, x_unit))
+    plt.xticks(x_ticks)
+    plt.yticks(np.arange(0, max_y, y_unit))
+    img_name = f'dealer_{dealer_index}_hist_of_count_divide_intervals.png'
+    file_path = os.path.join(tmp_save_dir, img_name)
+    plt.savefig(file_path, dpi=300)
+    # plt.show()
+    plt.close()
 
-print('generating dictionary ...')
-dictionary = corpora.Dictionary(doc_list)
-dictionary.filter_extremes(no_below=no_below)
+    plt.figure(figsize=(20., 20 * 4.8 / 10.4))
+    max_x = max(np.max(counts), 10)
+    min_x = np.min(counts)
+    x_unit = np.ceil((max_x - min_x) / 20.)
+    max_x = min_x + x_unit * 21 if (max_x - min_x) > 19 * x_unit else max_x + x_unit
+    bins = list(np.arange(min_x, max_x, x_unit))
+    hist, _ = np.histogram(counts, bins=bins)
+    max_y = int(np.max(hist))
+    y_unit = int(np.ceil(max_y / 20.))
+    max_y = int((np.ceil(max_y / float(y_unit)) + 1) * y_unit)
+    plt.hist(counts, bins=bins)
+    plt.title(
+        f'histogram of count_of_dates_that_has_transaction_for_each_bond of dealer {dealer_index}\nrange({min_x}, {max_x - x_unit}, {x_unit})')
+    plt.xlabel('count of dates that has transaction for each bond')
+    plt.ylabel('numbers')
+    plt.xticks(np.arange(min_x, max_x, x_unit))
+    plt.yticks(np.arange(0, max_y, y_unit))
+    img_name = f'dealer_{dealer_index}_hist_of_count_of_dates_that_has_transaction_for_each_bond.png'
+    file_path = os.path.join(tmp_save_dir, img_name)
+    plt.savefig(file_path, dpi=300)
+    # plt.show()
+    plt.close()
 
-# dictionary size plus one unknown
-voc_size = len(dictionary) + 1
+print('\nfinish traversing')
 
-print(f'voc_size: {voc_size}\n')
-
-print('converting to indices list\n')
-indices_list = list(map(lambda x: dictionary.doc2idx(x), doc_list))
-
-
-def __2_one_hot(x):
-    return np.eye(voc_size)[x]
-
-
-def __2_sum_one_hot(x, max_0_val=None):
-    l = np.sum(__2_one_hot(x), axis=0)
-    if max_0_val:
-        l[l > 0] = max_0_val
-    return l
-
-
-print('converting to one hot vectors ...\n')
-if dir_name not in ['bonds_by_dealer', 'bonds_by_dealer_clients', 'bonds_by_dealer_dealers'] or force_no_direction:
-    dates = list(map(__2_sum_one_hot, indices_list))
-
-else:
-    dates = []
-    length = len(indices_list)
-    for i, indices in enumerate(indices_list):
-        if i % 10 == 0:
-            progress = float(i + 1) / length * 100.
-            print('\rprogress: %.2f%%' % progress, end='')
-
-        l = np.zeros((voc_size,))
-        tmp_data = data[i]
-
-        for j, index in enumerate(indices):
-            one_hot = __2_one_hot(index)
-            tmp_type = tmp_data[j][-1]
-            if tmp_type[0] == 'b':
-                l += one_hot
-            else:
-                l -= one_hot
-
-        dates.append(l)
-
-print('finish processing \n')
-
-print(doc_list)
-print(voc_size)
-
-print('preparing plotting data ...\n')
-d = {}
-l = []
-for i, v in enumerate(dates):
-    where = list(map(lambda x: [i, x[0]], np.argwhere(v != 0)))
-    val = list(map(lambda x: x[0], v[np.argwhere(v != 0)]))
-
-    l += where
-
-    for j, count in enumerate(val):
-        if str(count) not in d:
-            d[str(count)] = []
-        d[str(count)].append(where[j])
-
-l = list(zip(*l))
-# plt.scatter(l[0], l[1], color='blue', s=1)
-
-print('plotting ... \n')
-
-rets = {}
-
-for k, v in d.items():
-    # if 'buy', then 'blue'; if 'sell', then 'red'
-    color = 'blue' if float(k) >= 0 else 'red'
-    _type = 'buy' if float(k) >= 0 else 'sell'
-
-    if name in ['StC', 'StD']:
-        color = 'red'
-        _type = 'sell'
-
-    s = int(abs(float(k))) * size_times
-    v = list(zip(*v))
-
-    if _type not in rets:
-        rets[_type] = True
-    else:
-        _type = None
-    p = plt.scatter(v[0], v[1], color=color, s=s, label=_type)
-    # rets[_type] = p
-
-print('done')
-
-# plt_list = [v for k, v in rets.items()]
-
-plt.title(f'dealer_{dealer_index} of {name} (bond_size: {voc_size}, no_below: {no_below})')
-plt.xlabel('dates (only weekdays from Jan 2nd to Dec 31th)')
-plt.ylabel('bond index')
-plt.legend()
-plt.show()
+print('\ndone')

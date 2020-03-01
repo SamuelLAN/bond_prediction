@@ -55,14 +55,6 @@ BONDS_BY_DEALER_DATE_DOC_DIR = os.path.join(DATA_ROOT_DIR, 'bonds_by_dealer_date
 DICT_BOND_ID_2_INDEX_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_id_2_index.json')
 DICT_BOND_INDEX_2_ID_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_index_2_id.json')
 
-__EXAM_DATA_DIR = os.path.join(DATA_ROOT_DIR, 'bond_prediction')
-ORIGIN_VOLUME_1k_10k_DIR = os.path.join(__EXAM_DATA_DIR, 'origin_1k_10k')
-ORIGIN_VOLUME_10k_100k_DIR = os.path.join(__EXAM_DATA_DIR, 'origin_10k_100k')
-ORIGIN_VOLUME_100k_1m_DIR = os.path.join(__EXAM_DATA_DIR, 'origin_100k_1m')
-ORIGIN_VOLUME_1m_10m_DIR = os.path.join(__EXAM_DATA_DIR, 'origin_1m_10m')
-ORIGIN_VOLUME_10m_DIR = os.path.join(__EXAM_DATA_DIR, 'origin_10m')
-ONE_HOT_INTERVAL_DIR = os.path.join(__EXAM_DATA_DIR, 'one_hot_interval_input_output')
-
 # ------------------------------- model -------------------------------------
 
 MODEL_NAME = 'lstm_with_add_'
@@ -105,11 +97,6 @@ def mk_if_not_exist(dir_path_list):
 
 
 mk_if_not_exist([
-    ORIGIN_VOLUME_1k_10k_DIR,
-    ORIGIN_VOLUME_10k_100k_DIR,
-    ORIGIN_VOLUME_100k_1m_DIR,
-    ORIGIN_VOLUME_1m_10m_DIR,
-    ORIGIN_VOLUME_10m_DIR,
     __RUNTIME_DIR,
     __PATH_MODEL_DIR,
     PATH_MODEL_DIR,

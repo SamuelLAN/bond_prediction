@@ -1,11 +1,13 @@
 import os
+import copy
 import numpy as np
 from gensim import corpora
 from matplotlib import pyplot as plt
 from config import path, date
 from lib import utils
 
-dict_bond_id_topics = utils.load_json(os.path.join(path.DATA_ROOT_DIR, 'dict_bond_id_topics.json'))
+# dict_bond_id_topics = utils.load_json(os.path.join(path.DATA_ROOT_DIR, 'dict_bond_id_topics.json'))
+dict_bond_id_topics = {}
 
 
 def __load_dir(_dir_path):
@@ -79,38 +81,42 @@ def __2_sum_one_hot(x, voc_size):
 
 
 def __process(_data, remove_bond_list, dir_name, no_below, force_no_direction):
-    doc_list = list(map(lambda x: list(map(lambda a: a[0], x)) if x else x, _data))
+    doc_list = copy.deepcopy(_data)
+    # doc_list = list(map(lambda x: list(map(lambda a: a[0], x)) if x else x, _data))
 
     def __remove_new_bonds(doc):
+        doc = list(doc)
         for _bond_id in remove_bond_list:
-            while _bond_id in doc:
-                doc.remove(_bond_id)
+            while [_bond_id, 'stc'] in doc:
+                doc.remove([_bond_id, 'stc'])
+            while [_bond_id, 'std'] in doc:
+                doc.remove([_bond_id, 'std'])
+            while [_bond_id, 'bfc'] in doc:
+                doc.remove([_bond_id, 'bfc'])
+            while [_bond_id, 'bfd'] in doc:
+                doc.remove([_bond_id, 'bfd'])
         return doc
 
     doc_list = list(map(__remove_new_bonds, doc_list))
 
     print('generating dictionary ...')
-    dictionary = corpora.Dictionary(doc_list)
+    dictionary = corpora.Dictionary(list(map(lambda x: list(map(lambda a: a[0], x)) if x else x, doc_list)))
     original_bond_size = len(dictionary)
 
     if dict_bond_id_topics:
         def __filter_bond_not_in_topics(doc):
-            return [x for x in doc if x in dict_bond_id_topics]
+            return [x for x in doc if x[0] in dict_bond_id_topics]
 
         doc_list = list(map(__filter_bond_not_in_topics, doc_list))
 
         while [] in doc_list:
             doc_list.remove([])
 
-        print('--------------------------------')
-        print(doc_list)
+        doc_list = list(map(lambda x: list(map(lambda a: list(map(lambda b: [b, a[1]], dict_bond_id_topics[a[0]])), x)), doc_list))
 
-        doc_list = list(map(lambda x: list(map(lambda a: dict_bond_id_topics[a], x)), doc_list))
+        doc_list = list(map(lambda x: list(np.vstack(x)), doc_list))
 
-        print('####################')
-        print(doc_list)
-
-        indices_list = list(map(lambda x: list(np.hstack(x)), doc_list))
+        indices_list = list(map(lambda x: list(map(lambda a: int(a[0]), x)), doc_list))
 
         voc_size = 100
 
@@ -124,15 +130,30 @@ def __process(_data, remove_bond_list, dir_name, no_below, force_no_direction):
             return None, 0, 0
 
         print('converting to indices list\n')
-        indices_list = list(map(lambda x: dictionary.doc2idx(x), doc_list))
+        indices_list = list(map(lambda x: dictionary.doc2idx(x),
+                                list(map(lambda x: list(map(lambda a: a[0], x)) if x else x, doc_list))
+                                ))
 
-        # filter bonds that have few transactions
-        def __remove_bonds_with_few_transactions(_indices):
-            while -1 in _indices:
-                _indices.remove(-1)
-            return _indices
+        def __remove_few_transactions(_indices, _doc):
+            len_indices = len(_indices) - 1
+            while len_indices >= 0:
+                if _indices[len_indices] == -1:
+                    del _indices[len_indices]
+                    del _doc[len_indices]
+                len_indices -= 1
 
-        indices_list = list(map(__remove_bonds_with_few_transactions, indices_list))
+            return _indices, _doc
+
+        for i, indices in enumerate(indices_list):
+            indices_list[i], doc_list[i] = __remove_few_transactions(indices, doc_list[i])
+
+        # # filter bonds that have few transactions
+        # def __remove_bonds_with_few_transactions(_indices):
+        #     while -1 in _indices:
+        #         _indices.remove(-1)
+        #     return _indices
+        #
+        # indices_list = list(map(__remove_bonds_with_few_transactions, indices_list))
 
     print(f'voc_size: {voc_size}\n')
 
@@ -151,10 +172,7 @@ def __process(_data, remove_bond_list, dir_name, no_below, force_no_direction):
                 print('\rprogress: %.2f%%' % progress, end='')
 
             l = np.zeros((voc_size,))
-            tmp_data = _data[i]
-
-            print(tmp_data)
-            exit()
+            tmp_data = doc_list[i]
 
             for j, index in enumerate(indices):
                 one_hot = __2_one_hot(index, voc_size)
@@ -245,8 +263,12 @@ def plot(dates, voc_size, original_bond_size, name, save_dir, dealer_index, size
 
     # plt_list = [v for k, v in rets.items()]
 
-    plt.title(
-        f'dealer_{dealer_index} of {name} (bond_size: {voc_size}, no_below: {no_below}, original_bond_size: {original_bond_size})')
+    if dict_bond_id_topics:
+        title = f'dealer_{dealer_index} of {name} (topic_size: {voc_size}, original_bond_size: {original_bond_size})'
+    else:
+        title = f'dealer_{dealer_index} of {name} (bond_size: {voc_size}, no_below: {no_below}, original_bond_size: {original_bond_size})'
+
+    plt.title(title)
     plt.xlabel('dates (only weekdays from Jan 2nd to Dec 31th)')
     plt.ylabel('bond index')
 
@@ -259,7 +281,7 @@ def plot(dates, voc_size, original_bond_size, name, save_dir, dealer_index, size
 
     save_path = os.path.join(save_dir, f'dealer_{dealer_index}_no_below_{no_below}.png')
     plt.savefig(save_path, dpi=300)
-    # plt.show()
+    plt.show()
     plt.close()
 
 
@@ -274,10 +296,10 @@ name_map = {
 }
 
 dir_name = 'bonds_by_dealer'
-dealer_index = '153'
-no_below = 5
+dealer_index = '493'
+no_below = 10
 size_times = 1
-force_no_direction = False
+force_no_direction = True
 
 dir_path = os.path.join(path.PREDICTION_DATE_DIR, dir_name, '2015', f'dealer_{dealer_index}')
 name = dir_name.replace('bonds_by_dealer_', '').replace('bonds_by_dealer', '')
@@ -291,7 +313,7 @@ path_dict_bond_id_offering_date = os.path.join(path.DATA_ROOT_DIR, 'dict_bond_id
 dict_bond_id_offering_date = utils.load_json(path_dict_bond_id_offering_date)
 remove_bond_list = []
 
-bound_date = '2014-12-01'
+bound_date = '2014-06-01'
 bound_timestamp = utils.date_2_timestamp(bound_date)
 for bond_id, offering_date in dict_bond_id_offering_date.items():
     if offering_date[:2] == '19':

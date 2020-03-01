@@ -58,7 +58,7 @@ for file_name in os.listdir(path.TRACE_DIR):
     print('\nstart converting data ...')
     data = np.array(data)
 
-    # [ bond_id, dealer_index, Contra_Party_Index, rating_mr_numeric, price, date ]
+    # [ bond_id, dealer_index, Contra_Party_Index, rating_mr_numeric, price, volume, rpt_side_cd, date ]
     data = list(map(lambda x: [x[0], x[10], x[11], x[14], x[4], x[3], x[5], str(x[9])], data))
     print('finish converting ')
 
@@ -176,7 +176,7 @@ for file_name in os.listdir(path.TRACE_DIR):
                 d_dealer_dealers[dealer_index].append(value)
 
                 # add buy from dealers
-                if dealer_index  not in d_dealer_buy_dealer:
+                if dealer_index not in d_dealer_buy_dealer:
                     d_dealer_buy_dealer[dealer_index] = []
                 d_dealer_buy_dealer[dealer_index].append(value)
 
