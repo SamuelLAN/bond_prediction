@@ -30,6 +30,8 @@ from lib import utils
 #
 # bound_timestamp = utils.date_2_timestamp('2014-06-01')
 #
+# d = {}
+#
 # length = len(data)
 # for i, v in enumerate(data):
 #     if i % 20 == 0:
@@ -53,7 +55,7 @@ from lib import utils
 #         continue
 #
 #     trade_type = ''
-#     if report_dealer_index == 0:
+#     if report_dealer_index == '0':
 #         trade_type = 'BfC'
 #
 #         if contra_party_index not in d_dealers:
@@ -61,7 +63,7 @@ from lib import utils
 #         d_dealers[contra_party_index].append([bond_id, volume, trade_type, date_clean])
 #
 #     else:
-#         if contra_party_index == 99999:
+#         if contra_party_index == '99999':
 #             trade_type = 'StC'
 #
 #             if report_dealer_index not in d_dealers:
@@ -75,11 +77,15 @@ from lib import utils
 #                 d_dealers[report_dealer_index] = []
 #             d_dealers[report_dealer_index].append([bond_id, volume, trade_type, date_clean])
 #
-#             if contra_party_index not in d_dealers and contra_party_index != '0':
+#             if contra_party_index not in d_dealers:
 #                 d_dealers[contra_party_index] = []
 #             d_dealers[contra_party_index].append([bond_id, volume, trade_type, date_clean])
 #
 #     v['type'] = trade_type
+#
+#     if trade_type not in d:
+#         d[trade_type] = 0
+#     d[trade_type] += 1
 #
 #     if bond_id not in d_new_bonds:
 #         d_new_bonds[bond_id] = []
@@ -91,15 +97,17 @@ from lib import utils
 # print(f'total_transaction_count: {total_transaction_count}')
 # print(f'num of new bonds: {len(d_new_bonds)}')
 #
-# # l_bonds = []
-# # for bond_id, l in d_new_bonds.items():
-# #     l_bonds.append([bond_id, len(l), np.sum(list(map(lambda x: x[0], l)))])
-# # l_bonds.sort(key=lambda x: -x[1])
-#
+# # # l_bonds = []
+# # # for bond_id, l in d_new_bonds.items():
+# # #     l_bonds.append([bond_id, len(l), np.sum(list(map(lambda x: x[0], l)))])
+# # # l_bonds.sort(key=lambda x: -x[1])
+# #
 # if '0' in d_dealers:
 #     del d_dealers['0']
 # if '99999' in d_dealers:
 #     del d_dealers['99999']
+#
+# print(d)
 
 from six.moves import cPickle as pickle
 
@@ -109,6 +117,7 @@ from six.moves import cPickle as pickle
 with open(os.path.join(path.ROOT_DIR, 'runtime', 'tmp123.pkl'), 'rb') as f:
     data, d_dealers, total_volume, total_transaction_count, bound_timestamp, d_new_bonds = pickle.load(f)
 
+d_dealer_for_gen_input = {}
 
 l_dealers = []
 for dealer_index, l in d_dealers.items():
@@ -146,17 +155,45 @@ for dealer_index, l in d_dealers.items():
         no_below_trace_count = 0
         no_below_volume = 0
 
-        for i, v in enumerate(tmp_bonds):
+        for i, v in enumerate(tmp_bond_indices):
             if v == -1:
                 continue
             no_below_trace_count += 1
             no_below_volume += l[i][1]
 
-        no_below_trace_count = len(tmp_bond_indices)
         new_l.append([no_below_trace_count, no_below_volume, no_below_num_bonds, tmp_dictionary])
 
+    if dealer_index not in d_dealer_for_gen_input:
+        tmp_dictionary = new_l[-1][-1]
+
+        tmp_trace_list = []
+        for i, v in enumerate(l):
+            tmp_bond_id = v[0]
+            if tmp_dictionary.doc2idx([tmp_bond_id])[0] == -1:
+                continue
+            tmp_trace_list.append(v)
+
+        d_dealer_for_gen_input[dealer_index] = {
+            'dealer_index': dealer_index,
+            'total_transaction_count': tmp_trace_count,
+            'total_volume': tmp_volume,
+            'dictionary': tmp_dictionary,
+            'no_below_transaction_count': new_l[-1][0],
+            'no_below_volume': new_l[-1][1],
+            'no_below_num_bonds': new_l[-1][2],
+            'trace_list': tmp_trace_list,
+        }
+
+    if new_l[-1][0] == 0 or new_l[-1][2] <= 5:
+        continue
     l_dealers.append(new_l)
 l_dealers.sort(key=lambda x: -x[1])
+
+print(f'len of d_dealer_for_gen_input: {len(d_dealer_for_gen_input)}')
+utils.write_pkl(os.path.join(path.ROOT_DIR, 'runtime', 'd_dealer_for_gen_input_with_no_below_50_25_10.pkl'), d_dealer_for_gen_input)
+# print('done')
+# exit()
+
 
 string = 'num_of_dealers,dealers_total_transaction_count,dealers_total_transaction_count(percentage),'
 string += 'dealer_total_volume,dealer_total_volume(percentage),'
@@ -256,5 +293,5 @@ for num_of_dealers in range(20, 270, 20):
     print(
         f'2. num of new bonds of dealers within first {num_of_dealers} transaction count: {len(d_dealer_new_bond_2)} ({len(d_dealer_new_bond_2) / len(d_new_bonds) * 100.}%)')
 
-with open(os.path.join(path.ROOT_DIR, 'runtime', 'stat_after_no_below_2.csv'), 'w') as f:
+with open(os.path.join(path.ROOT_DIR, 'runtime', 'stat_after_no_below_40_20_5_50_25_10.csv'), 'w') as f:
     f.write(string)

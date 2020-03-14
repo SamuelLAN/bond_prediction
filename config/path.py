@@ -57,7 +57,7 @@ DICT_BOND_INDEX_2_ID_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_index_2_id.js
 
 # ------------------------------- model -------------------------------------
 
-MODEL_NAME = 'lstm_with_add_'
+MODEL_NAME = 'lstm_new'
 TRAIN_MODEL_NAME = MODEL_NAME
 
 __CUR_DIR = os.path.abspath(os.path.split(__file__)[0])

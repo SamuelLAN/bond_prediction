@@ -32,30 +32,7 @@ NO_BELOW_FOR_DEALER_PRED = 10
 
 NO_BELOW_BONDS_FOR_EMB = 1000
 
-DATA_DIR_LIST = [
-    path.ORIGIN_VOLUME_1k_10k_DIR,
-    path.ORIGIN_VOLUME_10k_100k_DIR,
-    path.ORIGIN_VOLUME_100k_1m_DIR,
-    path.ORIGIN_VOLUME_1m_10m_DIR,
-    path.ORIGIN_VOLUME_10m_DIR,
-]
-
 # ---------------------- for log ---------------------------
 
-# LOG = {
-#     'subset': os.path.split(DATA_SUBSET)[1],
-#     'year': YEAR,
-#     'volume_level': VOLUME_LEVEL,
-#     'data_index': DATA_INDEX,
-#     'no_below': NO_BELOW,
-#     'train/test_ratio': '0.8/0.2',
-# }
-
 LOG = {
-    'subset': os.path.split(DATA_SUBSET_FOR_TEMPORAL_INPUT)[1],
-    'year': YEAR_FOR_TEMPORAL_INPUT,
-    'volume_level': VOLUME_LEVEL_FOR_TEMPORAL_INPUT,
-    'data_index': DATA_INDEX_FOR_TEMPORAL_INPUT,
-    'no_below': NO_BELOW_FOR_TEMPORAL_INPUT,
-    'train/test_ratio': '0.8/0.2',
 }

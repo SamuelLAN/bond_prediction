@@ -6,26 +6,32 @@ import warnings
 
 warnings.filterwarnings('ignore')
 
-from models.lstm_no_emb import Model
+from models.lstm_new import Model
 from lib.utils import output_and_log
 from config import path
-from config.load import LOG, TRAIN_VAL_RATIO
+from config.load import LOG
 from config.param import TIME_DIR
-from load.temporal_input_interval_output_no_emb_add_all_average import Loader
+from load.load_group import Loader
 
 
 class Train:
     """ Run the model and estimate its performance """
+
+    TRAIN_GROUP = r'D:\Data\share_mine_laptop\community_detection\data\inputs\group_Spectral_Clustering_filter_lower_5_with_model_input_features\no_day_off_no_distinguish_buy_sell_use_transaction_count\group_2_no_below_50_25_10_g_minus_1_1_train'
+    TEST_GROUP = r'D:\Data\share_mine_laptop\community_detection\data\inputs\group_Spectral_Clustering_filter_lower_5_with_model_input_features\no_day_off_no_distinguish_buy_sell_use_transaction_count\group_2_no_below_50_25_10_g_minus_1_1_test'
 
     MODEL_CLASS = Model
     MODEL_DIR = TIME_DIR
 
     def __init__(self):
         # initialize data instances
-        o_load = Loader()
-        self.__X_train, self.__y_train = o_load.train()
-        self.__X_test, self.__y_test = o_load.test()
-        self.__topic_mask = o_load.topic_mask()
+        train_load = Loader(self.TRAIN_GROUP)
+        test_load = Loader(self.TEST_GROUP)
+        self.__X_train, self.__y_train = train_load.all()
+        self.__X_test, self.__y_test = test_load.all()
+        self.__input_dim = train_load.input_dim()
+
+        # self.__topic_mask = o_load.topic_mask()
         # self.__split_data()
 
     # def __split_data(self):
@@ -46,7 +52,7 @@ class Train:
         print('\nStart training model %s/%s ...' % (self.MODEL_DIR, path.TRAIN_MODEL_NAME))
 
         # initialize model instance
-        model = self.MODEL_CLASS(self.MODEL_DIR, path.TRAIN_MODEL_NAME, self.__y_train.shape[-1])
+        model = self.MODEL_CLASS(self.__input_dim, self.MODEL_DIR, path.TRAIN_MODEL_NAME, self.__y_train.shape[-1])
 
         # train model
         train_start_time = time.time()
@@ -56,11 +62,11 @@ class Train:
         # test model
         eval_train_start_time = time.time()
         train_result_dict = model.test(None, None, self.__X_train, self.__y_train, None, 'train')
-        train_result_dict_with_mask = model.test(None, None, self.__X_train, self.__y_train, self.__topic_mask, 'train')
+        # train_result_dict_with_mask = model.test(None, None, self.__X_train, self.__y_train, None, 'train')
         eval_train_end_time = time.time()
         test_result_dict = model.test(self.__X_train, self.__y_train, self.__X_test, self.__y_test, None, 'test')
-        test_result_dict_with_mask = model.test(self.__X_train, self.__y_train, self.__X_test, self.__y_test,
-                                                self.__topic_mask, 'test')
+        # test_result_dict_with_mask = model.test(self.__X_train, self.__y_train, self.__X_test, self.__y_test,
+        #                                         name='test')
         eval_test_use_time = time.time() - eval_train_end_time
         eval_train_time = eval_train_end_time - eval_train_start_time
 
@@ -68,12 +74,10 @@ class Train:
 
         # show results
         self.__log_results(self.MODEL_DIR, train_result_dict, val_result_dict, test_result_dict,
-                           train_result_dict_with_mask, test_result_dict_with_mask,
                            self.MODEL_CLASS.params, train_use_time, eval_train_time, eval_test_use_time)
 
     @staticmethod
     def __log_results(model_time, train_result_dict, val_result_dict, test_result_dict,
-                      train_result_dict_with_mask, test_result_dict_with_mask,
                       model_params, train_use_time, eval_train_time, eval_test_use_time):
         """
         Show the validation result
@@ -84,8 +88,6 @@ class Train:
                 model_time,
                 train_result_dict,
                 test_result_dict,
-                train_result_dict_with_mask,
-                test_result_dict_with_mask,
                 model_params,
                 str(train_use_time),
                 str(eval_train_time),
@@ -97,8 +99,6 @@ class Train:
                  'model_time: %s\n' \
                  'train_result_dict: %s\n' \
                  'test_result_dict: %s\n' \
-                 'train_result_dict_with_mask: %s\n' \
-                 'test_result_dict_with_mask: %s\n' \
                  'model_params: %s\n' \
                  'train_use_time: %ss\n' \
                  'eval_train_time: %ss\n' \
@@ -128,10 +128,6 @@ class Train:
         for k, v in train_result_dict.items():
             csv_string += f',{round(v, 4)}'
         for k, v in test_result_dict.items():
-            csv_string += f',{round(v, 4)}'
-        for k, v in train_result_dict_with_mask.items():
-            csv_string += f',{round(v, 4)}'
-        for k, v in test_result_dict_with_mask.items():
             csv_string += f',{round(v, 4)}'
 
         output_and_log(path.PATH_CSV_LOG, csv_string)
