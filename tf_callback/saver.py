@@ -1,5 +1,6 @@
 #!/usr/bin/Python
 # -*- coding: utf-8 -*-
+import os
 import numpy as np
 import tensorflow as tf
 
@@ -11,6 +12,7 @@ class Saver(keras.callbacks.Callback):
                  start_train_monitor='categorical_accuracy', start_train_monitor_val=0.65):
         super(Saver, self).__init__()
         self.__file_path = file_path
+        self.__model_dir = os.path.split(file_path)[0]
         self.__monitor = monitor
         self.__mode = mode
         self.__early_stop = early_stop
@@ -27,6 +29,13 @@ class Saver(keras.callbacks.Callback):
         monitor = logs[self.__monitor]
 
         if (self.__mode == 'max' and monitor >= self.__best) or (self.__mode == 'min' and monitor <= self.__best):
+            # make sure there will be no more than 5 models
+            file_list = os.listdir(self.__model_dir)
+            file_list.sort()
+            while len(file_list) >= 5:
+                file_path = file_list.pop(0)
+                os.remove(os.path.join(self.__model_dir, file_path))
+
             filepath = self.__file_path.format(epoch=epoch + 1, **logs)
             self.model.save_weights(filepath, overwrite=True)
             self.__best = monitor

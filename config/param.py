@@ -1,8 +1,8 @@
 import time
+from config.load import TIME_DIR, IS_TRAIN
 from lib.metrics import MultiLabelClassification as MLC
 
 RANDOM_STATE = 42
-IS_TRAIN = False
 
 measure_dict = {
     'accuracy': MLC.accuracy,
@@ -12,6 +12,4 @@ measure_dict = {
     'recall': MLC.recall,
 }
 
-# TIME_DIR = time.strftime('%Y_%m_%d_%H_%M_%S')
-TIME_DIR = '2020_03_14_00_27_57'
 NEW_TIME_DIR = time.strftime('%Y_%m_%d_%H_%M_%S')

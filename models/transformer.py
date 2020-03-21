@@ -1,8 +1,8 @@
 import tensorflow as tf
 from lib.nn_model_base import NN
-from tf_models.lstm import LSTM
+from tf_learning_rate.warmup_then_down import CustomSchedule
+from tf_models.transformer import Transformer, create_padding_mask, create_look_ahead_mask
 from tf_metrics.multi_label_classification import tf_accuracy, tf_precision, tf_recall, tf_f1, tf_hamming_loss
-
 
 keras = tf.keras
 layers = keras.layers
@@ -13,19 +13,23 @@ class Model(NN):
         **NN.default_params,
         'learning_rate': 1e-3,
         'emb_dim': 128,
-        'hidden_units': 128,
+        'dim_model': 128,
+        'ff_units': 128,
+        'num_layers': 6,
+        'num_heads': 8,
+        'use_embeddings': True,
         # 'lr_decay_rate': 0.01,
         # 'lr_staircase': False,
         # 'lr_factor': 0.6,
         # 'lr_patience': 10,
-        'batch_size': 64,
+        'batch_size': 128,
         'epoch': 3000,
-        'early_stop': 50,
+        'early_stop': 30,
         'monitor': 'val_tf_f1',
         'monitor_mode': 'max',
         'monitor_start_train': 'tf_accuracy',
         'monitor_start_train_val': 0.70,
-        'dropout': 0.0,
+        'dropout': 0.1,
         # 'kernel_initializer': 'glorot_uniform',
         # 'loss': 'categorical_crossentropy',
         'loss': 'mean_squared_error',
@@ -50,6 +54,7 @@ class Model(NN):
     def config_for_keras(self):
         return {
             'optimizer': tf.compat.v1.train.AdamOptimizer,
+            # 'optimizer': tf.keras.optimizers.Adam,
             # 'loss': keras.losses.binary_crossentropy,
             # 'loss': keras.losses.categorical_crossentropy,
             'loss': keras.losses.mean_squared_error,
@@ -69,12 +74,24 @@ class Model(NN):
         }
 
     def build(self):
+        # self.set_learning_rate(CustomSchedule(self.params['dim_model']))
+
         """ Build neural network architecture """
-        self.model = LSTM(
-            input_dim=self.__input_dim,
-            emb_dim=self.params['emb_dim'],
-            num_class=self.__num_classes,
-            hidden_units=self.params['hidden_units'],
-            dropout_rate=self.params['dropout'],
-            activation='tanh',
+        self.model = Transformer(
+            num_layers=self.params['num_layers'],
+            d_model=self.params['dim_model'],
+            num_heads=self.params['num_heads'],
+            d_ff=self.params['ff_units'],
+            input_vocab_size=self.__input_dim,
+            target_vocab_size=self.__num_classes,
+            max_pe_input=20,
+            max_pe_target=20,
+            drop_rate=self.params['dropout'],
+            use_embeddings=self.params['use_embeddings'],
         )
+
+    def predict(self, x):
+        return self.model.predict(x, batch_size=self.params['batch_size'])
+
+    def test(self, train_x, train_y_one_hot, val_x, val_y_one_hot, mask=None, name='val'):
+        return self.test_in_batch(val_x, val_y_one_hot, mask, name)

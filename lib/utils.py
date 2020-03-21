@@ -1,3 +1,4 @@
+import os
 import time
 import json
 import chardet
@@ -64,10 +65,11 @@ def decode_2_utf8(string):
         return string
 
 
-def output_and_log(file_path, output):
+def output_and_log(file_path, output, headline=''):
     """ Display the output to the console and save it to the log file. """
     # show to the console
     print(output)
     # save to the log file
+    content = headline + output if not os.path.exists(file_path) else output
     with open(file_path, 'ab') as f:
-        f.write(str(output + '\n').encode('utf-8'))
+        f.write(str(content + '\n').encode('utf-8'))

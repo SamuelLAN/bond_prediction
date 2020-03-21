@@ -250,7 +250,7 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
     return X_mask, Y
 
 
-group_name = 'group_Spectral_Clustering_filter_lower_5_with_model_input_features.json'
+group_name = 'group_Spectral_Clustering_filter_lower_5.json'
 param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
 group_index = 3
 is_train = False

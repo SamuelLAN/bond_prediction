@@ -10,7 +10,7 @@ from config.path import PATH_MODEL_DIR, PATH_BOARD_DIR, mkdir_time
 from tf_callback.saver import Saver
 from tf_callback.board import Board
 
-keras = tf.keras
+keras = tf.compat.v1.keras
 
 
 class NN:
@@ -154,9 +154,12 @@ class NN:
         self.tf_board_dir = mkdir_time(PATH_BOARD_DIR, model_dir)
         self.__update_tf_board_dir = mkdir_time(PATH_BOARD_DIR, NEW_TIME_DIR)
 
+    def set_learning_rate(self, lr):
+        self.__learning_rate = lr
+
     def __init_variables(self, data_size):
         """ Initialize some variables that will be used while training """
-        self.__global_step = tf.train.get_or_create_global_step()
+        self.__global_step = tf.compat.v1.train.get_or_create_global_step()
         self.__steps_per_epoch = int(data_size // self.params['batch_size'])
         self.__steps = self.__steps_per_epoch * self.params['epoch']
 
@@ -207,7 +210,7 @@ class NN:
         self.compile(self.__learning_rate)
 
         # initialize global variables
-        keras.backend.get_session().run(tf.global_variables_initializer())
+        # keras.backend.get_session().run(tf.compat.v1.global_variables_initializer())
 
         # if model exists, load the model weight
         if os.path.isfile(self.model_path) or os.path.isfile(self.model_path + '.index'):
@@ -282,7 +285,10 @@ class NN:
 
         # traverse all data
         for step in range(steps):
-            tmp_x = x[step * batch_size: (step + 1) * batch_size]
+            if isinstance(x, list):
+                tmp_x = [v[step * batch_size: (step + 1) * batch_size] for v in x]
+            else:
+                tmp_x = x[step * batch_size: (step + 1) * batch_size]
             logits_list.append(self.predict(tmp_x))
 
         logits_list = np.vstack(logits_list)
@@ -291,6 +297,8 @@ class NN:
 
     @staticmethod
     def measure_and_print(y_ont_hot, logits_list, mask=None, name='val'):
+        logits_list = logits_list.reshape(y_ont_hot.shape)  # make the shape of logits the same as y_true
+
         result_dict = {}
         for key, func in measure_dict.items():
             result_dict[key] = func(y_ont_hot, logits_list, mask)

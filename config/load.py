@@ -1,38 +1,23 @@
 import os
-from config import path
+import time
 
-TRAIN_VAL_RATIO = 0.995
+# MODEL_NAME = 'transformer'
+MODEL_NAME = 'transformer_no_embeddings'
 
-# ------------------------ (interval input, bond prediction) for loading single dealer data --------------------------
+TIME_DIR = time.strftime('%Y_%m_%d_%H_%M_%S')
+# TIME_DIR = '2020_03_15_18_19_02'
+IS_TRAIN = True
 
-DATA_SUBSET = path.PREDICTION_DATE_BY_VOLUME_DEALERS_BY_BOND_SELL_CLIENT
-YEAR = '2015'
-VOLUME_LEVEL = '100_1k'
-DATA_INDEX = 'bond_AES3903624'
-NO_BELOW = 5
-
-# ------------------------ (temporal input, bond prediction) for loading single dealer data --------------------------
-
-DATA_SUBSET_FOR_TEMPORAL_INPUT = path.PREDICTION_DATE_BY_VOLUME_BONDS_BY_DEALER_DIR
-YEAR_FOR_TEMPORAL_INPUT = '2015'
-VOLUME_LEVEL_FOR_TEMPORAL_INPUT = '10k_100k'
-DATA_INDEX_FOR_TEMPORAL_INPUT = 'dealer_83'
-NO_BELOW_FOR_TEMPORAL_INPUT = 10
-
-
-# ------------------------ (interval input, dealer prediction) for loading single dealer data --------------------------
-
-DATA_SUBSET_FOR_DEALER_PRED = path.PREDICTION_DATE_BY_VOLUME_DEALERS_BY_BOND_DIR
-YEAR_FOR_DEALER_PRED = '2015'
-VOLUME_LEVEL_FOR_DEALER_PRED = '10k_100k'
-DATA_INDEX_FOR_DEALER_PRED = 'bond_AAPL4001809'
-NO_BELOW_FOR_DEALER_PRED = 10
-
-# ---------------------- for bond embeddings -----------------------
-
-NO_BELOW_BONDS_FOR_EMB = 1000
-
-# ---------------------- for log ---------------------------
+__group_dir = 'D:\Data\share_mine_laptop\community_detection\data\inputs'
+group_name = 'group_Spectral_Clustering_filter_lower_5_with_model_input_features'
+# group_name = 'group_K-means_filter_lower_5'
+# group_name = 'group_Spectral_Clustering_filter_lower_5'
+group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
+group_file_name = 'group_0_no_below_50_25_10_g_minus_1_1'
+group_path = os.path.join(__group_dir, group_name, group_param_name, group_file_name)
 
 LOG = {
+    'group_name': group_name,
+    'group_param_name': group_param_name,
+    'group_file_name': group_file_name,
 }
