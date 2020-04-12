@@ -3,6 +3,7 @@
 import os
 import re
 import math
+import types
 import numpy as np
 import tensorflow as tf
 from config.param import IS_TRAIN, measure_dict, RANDOM_STATE, NEW_TIME_DIR
@@ -41,7 +42,7 @@ class NN:
     def config_for_keras(self):
         """ NEED: Customize the config for keras """
         return {
-            'optimizer': tf.train.AdamOptimizer,
+            'optimizer': tf.compat.v1.train.AdamOptimizer,
             # 'loss': keras.losses.binary_crossentropy,
             'loss': 'sparse_categorical_crossentropy',
             'metrics': [
@@ -160,7 +161,7 @@ class NN:
     def __init_variables(self, data_size):
         """ Initialize some variables that will be used while training """
         self.__global_step = tf.compat.v1.train.get_or_create_global_step()
-        self.__steps_per_epoch = int(data_size // self.params['batch_size'])
+        self.__steps_per_epoch = int(np.ceil(data_size * 1. / self.params['batch_size']))
         self.__steps = self.__steps_per_epoch * self.params['epoch']
 
         self.__decay_steps = self.__steps if not self.params['lr_staircase'] else self.__steps_per_epoch
@@ -222,15 +223,18 @@ class NN:
             self.tf_board_dir = self.__update_tf_board_dir
             self.__init_callback()
 
-    def train(self, train_x, train_y_one_hot, val_x, val_y_one_hot, mask=None):
+    def train(self, train_x, train_y_one_hot, val_x, val_y_one_hot, train_size, mask=None):
         """ Train model with all data loaded in memory """
-        self.before_train(len(train_y_one_hot), train_x, train_y_one_hot)
+        self.before_train(train_size, train_x, train_y_one_hot)
 
         if IS_TRAIN:
             # The returned value may be useful in the future
+            batch_size = self.params['batch_size'] if not isinstance(train_x, types.GeneratorType) else None
+            steps_per_epoch = None if not isinstance(train_x, types.GeneratorType) else self.__steps_per_epoch
             history_object = self.model.fit(train_x, train_y_one_hot,
                                             epochs=self.params['epoch'],
-                                            batch_size=self.params['batch_size'],
+                                            batch_size=batch_size,
+                                            steps_per_epoch=steps_per_epoch,
                                             validation_data=(val_x, val_y_one_hot),
                                             callbacks=self.config_for_keras['callbacks'],
                                             class_weight=self.__class_weight,
@@ -245,8 +249,8 @@ class NN:
     @staticmethod
     def reset_graph():
         keras.backend.get_session().close()
-        tf.reset_default_graph()
-        keras.backend.set_session(tf.Session(graph=tf.get_default_graph()))
+        tf.compat.v1.reset_default_graph()
+        keras.backend.set_session(tf.compat.v1.Session(graph=tf.compat.v1.get_default_graph()))
 
     def compile(self, learning_rate):
         self.model.compile(optimizer=self.config_for_keras['optimizer'](learning_rate=learning_rate),
@@ -261,52 +265,92 @@ class NN:
                 return
 
         # empty fit, to prevent error from occurring when loading model
-        self.model.fit(x, y, epochs=0) if not isinstance(x, type(None)) else None
+        if not self.model.built and not isinstance(x, type(None)):
+            if isinstance(x, types.GeneratorType):
+                for tmp_x, tmp_y in x:
+                    if isinstance(tmp_x, tuple):
+                        x = tuple([v[:1] for v in tmp_x])
+                    else:
+                        x = tmp_x[:1]
+                    y = tmp_y[:1]
+                    break
+            self.model.fit(x, y, epochs=0, verbose=0)
 
         self.model.load_weights(model_path)
         print('Finish loading weights from %s ' % model_path)
 
-    def test(self, train_x, train_y_one_hot, val_x, val_y_one_hot, mask=None, name='val'):
+    def test(self, train_x, train_y_one_hot, val_x, val_y_one_hot, mask=None, name='val', data_size=None):
         """ Customize for testing model """
         if name == 'train':
-            return self.test_in_batch(val_x, val_y_one_hot, mask, name)
+            return self.test_in_batch(val_x, val_y_one_hot, mask, name, data_size)
 
         # evaluate the validation data
-        return self.measure_and_print(val_y_one_hot, self.predict(val_x), mask, name)
+        return self.measure_and_print(val_y_one_hot, self.predict(val_x), mask, name, {})
 
-    def test_in_batch(self, x, y_ont_hot, mask=None, name='val'):
+    def test_in_batch(self, x, y_ont_hot, mask=None, name='val', data_size=None):
         """ evaluate the model performance while data size is big """
         # variables that record all results
         logits_list = []
 
         # calculate the total steps
         batch_size = self.params['batch_size']
-        steps = int(math.ceil(len(y_ont_hot) * 1.0 / batch_size))
+        data_size = data_size if data_size else len(y_ont_hot)
+        steps = int(math.ceil(data_size * 1.0 / batch_size))
 
         # traverse all data
-        for step in range(steps):
-            if isinstance(x, list):
-                tmp_x = [v[step * batch_size: (step + 1) * batch_size] for v in x]
-            else:
-                tmp_x = x[step * batch_size: (step + 1) * batch_size]
-            logits_list.append(self.predict(tmp_x))
+        # TODO change here
+        if isinstance(x, types.GeneratorType):
+            step = 0
+            result_dict = {}
+
+            for tmp in x:
+                tmp_inputs, tmp_y = tmp
+                logits = self.predict(tmp_inputs)
+                result_dict = self.measure_and_print(tmp_y, logits, name=name, result_dict=result_dict, show=False, sum=True)
+
+                if step % 5 == 0:
+                    progress = float(step + 1) / steps * 100.
+                    print('\rprogress: %.2f%% ' % progress, end='')
+
+                step += 1
+                if step >= steps:
+                    break
+
+            print('\n-----------------------------------------')
+            for key, val in result_dict.items():
+                result_dict[key] = val / float(steps)
+                print('%s %s: %f' % (name, key, result_dict[key]))
+
+            return result_dict
+
+        else:
+            for step in range(steps):
+                if isinstance(x, list):
+                    tmp_x = [v[step * batch_size: (step + 1) * batch_size] for v in x]
+                else:
+                    tmp_x = x[step * batch_size: (step + 1) * batch_size]
+                logits_list.append(self.predict(tmp_x))
 
         logits_list = np.vstack(logits_list)
 
-        return self.measure_and_print(y_ont_hot, logits_list, mask, name)
+        return self.measure_and_print(y_ont_hot, logits_list, mask, name, {})
 
     @staticmethod
-    def measure_and_print(y_ont_hot, logits_list, mask=None, name='val'):
+    def measure_and_print(y_ont_hot, logits_list, mask=None, name='val', result_dict={}, show=True, sum=False):
         logits_list = logits_list.reshape(y_ont_hot.shape)  # make the shape of logits the same as y_true
 
-        result_dict = {}
         for key, func in measure_dict.items():
-            result_dict[key] = func(y_ont_hot, logits_list, mask)
+            val = func(y_ont_hot, logits_list, mask)
+            if key in result_dict and sum:
+                result_dict[key] += val
+            else:
+                result_dict[key] = val
 
         # show results
-        print('\n-----------------------------------------')
-        for key, value in result_dict.items():
-            print('%s %s: %f' % (name, key, value))
+        if show:
+            print('\n-----------------------------------------')
+            for key, value in result_dict.items():
+                print('%s %s: %f' % (name, key, value))
 
         return result_dict
 

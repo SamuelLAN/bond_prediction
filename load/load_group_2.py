@@ -11,15 +11,16 @@ import threading
 class Loader:
     random_state = 42
 
-    def __init__(self, dir_path, buffer_size=8000):
+    def __init__(self, dir_path, buffer_size=8000, prefix='train'):
         assert os.path.exists(dir_path)
         self.__dir_path = dir_path
-        self.__is_train_set = True if 'train' in dir_path.lower() else False
-        self.__file_list = list(map(lambda file_name: os.path.join(dir_path, file_name), os.listdir(dir_path)))
-        self.__file_list.sort(key=lambda x: os.stat(x).st_size)
-        self.__small_file_path = self.__file_list[0]
+        self.__prefix = prefix
 
-        random.seed(42)
+        # get all file paths
+        file_list = list(filter(lambda file_name: file_name[:len(prefix)] == prefix, os.listdir(dir_path)))
+        self.__file_list = list(map(lambda file_name: os.path.join(dir_path, file_name), file_list))
+
+        random.seed(self.random_state)
         random.shuffle(self.__file_list)
 
         self.__X = np.array([])
@@ -31,6 +32,9 @@ class Loader:
         self.__buffer_size = buffer_size
         self.__running = True
         self.__has_load_all = False
+
+        dealers = list(map(lambda x: os.path.split(x)[1].split('_')[1], self.__file_list))
+        self.dealers = list(set(dealers))
 
     def start(self):
         thread = threading.Thread(target=self.__load)
@@ -57,7 +61,7 @@ class Loader:
 
                 self.__data += data
 
-            time.sleep(0.2)
+            time.sleep(0.1)
 
         print('Stop thread for loading data ')
 
@@ -65,8 +69,19 @@ class Loader:
         if self.__size:
             return self.__size
 
-        last_X_mask, last_Y = utils.load_pkl(self.__small_file_path)
-        self.__size = (self.__len_files - 1) * 2000 + len(last_X_mask)
+        file_list_for_size = list(map(lambda x: [os.stat(x).st_size, x], self.__file_list))
+        max_size = max(list(map(lambda x: x[0], file_list_for_size)))
+        len_files = len(file_list_for_size)
+
+        file_list_for_size = list(filter(lambda x: x[0] < max_size, file_list_for_size))
+        len_files -= len(file_list_for_size)
+
+        total = 0
+        for _, file_path in file_list_for_size:
+            tmp_x, tmp_y = utils.load_pkl(file_path)
+            total += len(tmp_y)
+
+        self.__size = len_files * 12 + total
         return self.__size
 
     @staticmethod
@@ -110,17 +125,31 @@ class Loader:
 
         self.__has_load_all = True
 
-        # add statistics to log
-        self.__statistic()
+        # # add statistics to log
+        # self.__statistic()
 
         np.random.seed(self.random_state)
         data = list(zip(self.__X, self.__y))
         np.random.shuffle(data)
+
         self.__X, self.__y = zip(*data)
         self.__X = np.array(self.__X)
         self.__y = np.array(self.__y)
 
+        # add statistics to log
+        self.__statistic()
+
         return self.__X, self.__y
+
+    def get_dealer(self, dealer_index):
+        file_list = list(filter(lambda x: os.path.split(x)[1].split('_')[1] == dealer_index, self.__file_list))
+        X = np.array([])
+        Y = np.array([])
+        for i, file_path in enumerate(file_list):
+            x_mask, y = utils.load_pkl(file_path)
+            X = np.vstack([X, x_mask]) if len(X) else np.array(x_mask)
+            Y = np.vstack([Y, y]) if len(Y) else np.array(y)
+        return np.array(X, dtype=np.int32), np.array(Y, dtype=np.int32)
 
     def input_dim(self):
         if self.__X.any():
@@ -141,18 +170,17 @@ class Loader:
         label_density = np.mean(tmp_y)
 
         # add the statistic to log
-        prefix = 'train' if self.__is_train_set else 'test'
-        load.LOG[f'{prefix}_label_cardinality'] = label_cardinality
-        load.LOG[f'{prefix}_label_density'] = label_density
-        load.LOG[f'{prefix}_size'] = len(self.__y)
+        load.LOG[f'{self.__prefix}_label_cardinality'] = label_cardinality
+        load.LOG[f'{self.__prefix}_label_density'] = label_density
+        load.LOG[f'{self.__prefix}_size'] = len(self.__y)
         load.LOG['input_length'] = self.input_length()
         load.LOG['voc_size'] = self.input_dim()
         load.LOG['group_dir'] = self.__dir_path
 
         print('\n---------------------------')
-        print(f'{prefix}_label_cardinality: {label_cardinality}')
-        print(f'{prefix}_label_cardinality: {label_density}')
-        print(f'{prefix}_size: {len(self.__y)}')
+        print(f'{self.__prefix}_label_cardinality: {label_cardinality}')
+        print(f'{self.__prefix}_label_cardinality: {label_density}')
+        print(f'{self.__prefix}_size: {len(self.__y)}')
         print(f'input_length: {self.input_length()}')
         print(f'voc_size: {self.input_dim()}')
         print('----------------------------\n')
@@ -168,18 +196,17 @@ class Loader:
         label_density = np.mean(tmp_y)
 
         # add the statistic to log
-        prefix = 'train' if self.__is_train_set else 'test'
-        load.LOG[f'{prefix}_sample_label_cardinality'] = label_cardinality
-        load.LOG[f'{prefix}_sample_label_density'] = label_density
-        load.LOG[f'{prefix}_size'] = self.size()
+        load.LOG[f'{self.__prefix}_label_cardinality'] = label_cardinality
+        load.LOG[f'{self.__prefix}_label_density'] = label_density
+        load.LOG[f'{self.__prefix}_size'] = self.size()
         load.LOG['input_length'] = self.input_length()
         load.LOG['voc_size'] = self.input_dim()
         load.LOG['group_dir'] = self.__dir_path
 
         print('\n---------------------------')
-        print(f'{prefix}_sample_label_cardinality: {label_cardinality}')
-        print(f'{prefix}_sample_label_cardinality: {label_density}')
-        print(f'{prefix}_size: {self.size()}')
+        print(f'{self.__prefix}_label_cardinality: {label_cardinality}')
+        print(f'{self.__prefix}_label_cardinality: {label_density}')
+        print(f'{self.__prefix}_size: {self.size()}')
         print(f'input_length: {self.input_length()}')
         print(f'voc_size: {self.input_dim()}')
         print('----------------------------\n')

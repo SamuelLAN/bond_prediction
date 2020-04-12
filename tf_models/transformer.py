@@ -93,7 +93,7 @@ class MultiHeadAttention(layers.Layer):
 
         self.dense = layers.Dense(d_model, activation='tanh')
 
-    def split_heads(self, x, batch_size ):
+    def split_heads(self, x, batch_size):
         """Split the last dimension into (num_heads, depth).
         Transpose the result such that the shape is (batch_size, num_heads, seq_len, depth)
         """
@@ -136,11 +136,16 @@ def point_wise_feed_forward_network(d_model, d_ff, dropout=0.1):
 
 
 class EncoderLayer(layers.Layer):
-    def __init__(self, d_model, num_heads, d_ff, drop_rate=0.1):
+    def __init__(self, d_model, num_heads, d_ff, use_embeddings, input_dim, drop_rate=0.1):
         super(EncoderLayer, self).__init__()
 
         self.mha = MultiHeadAttention(d_model, num_heads, drop_rate)
-        self.ffn = point_wise_feed_forward_network(d_model, d_ff, drop_rate)
+        if use_embeddings:
+            self.ffn = point_wise_feed_forward_network(d_model, d_ff, drop_rate)
+        else:
+            self.ffn = point_wise_feed_forward_network(input_dim, d_ff, drop_rate)
+
+        self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
 
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
@@ -154,25 +159,37 @@ class EncoderLayer(layers.Layer):
     def call(self, x, training, mask):
         attn_output, _ = self.mha(x, x, x, mask, training=training)  # (batch_size, input_seq_len, d_model)
         attn_output = self.dropout1(attn_output, training=training)
-        out1 = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, d_model)
-        out1 = self.dropout3(out1, training=training)
+
+        attn_output = self.__dense1(attn_output)
+        attn_output = self.dropout3(attn_output, training=training)
+        out1 = attn_output + x
+        # out1 = self.dropout3(out1, training=training)
+
+        # out1 = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, d_model)
 
         ffn_output = self.ffn(out1, training=training)  # (batch_size, input_seq_len, d_model)
         ffn_output = self.dropout2(ffn_output, training=training)
         out2 = self.layernorm2(out1 + ffn_output)  # (batch_size, input_seq_len, d_model)
-        out2 = self.dropout4(out2, training=training)
+        # out2 = self.dropout4(out2, training=training)
 
         return out2
 
 
 class DecoderLayer(layers.Layer):
-    def __init__(self, d_model, num_heads, d_ff, drop_rate=0.1):
+    def __init__(self, d_model, num_heads, d_ff, use_embeddings, input_dim, drop_rate=0.1):
         super(DecoderLayer, self).__init__()
 
         self.mha1 = MultiHeadAttention(d_model, num_heads, drop_rate)
         self.mha2 = MultiHeadAttention(d_model, num_heads, drop_rate)
 
-        self.ffn = point_wise_feed_forward_network(d_model, d_ff, drop_rate)
+        if use_embeddings:
+            self.ffn = point_wise_feed_forward_network(d_model, d_ff, drop_rate)
+        else:
+            self.ffn = point_wise_feed_forward_network(input_dim, d_ff, drop_rate)
+
+        self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
+        self.__dense2 = layers.Dense(input_dim if not use_embeddings else d_model)
+        self.__dense3 = layers.Dense(input_dim if not use_embeddings else d_model)
 
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
@@ -192,19 +209,33 @@ class DecoderLayer(layers.Layer):
         attn1, attn_weights_block1 = self.mha1(x, x, x, look_ahead_mask,
                                                training=training)  # (batch_size, target_seq_len, d_model)
         attn1 = self.dropout1(attn1, training=training)
-        out1 = self.layernorm1(attn1 + x)
-        out1 = self.dropout4(out1, training=training)
+
+        attn1 = self.__dense1(attn1)
+        attn1 = self.dropout4(attn1, training=training)
+        out1 = attn1 + x
+        # out1 = self.dropout4(out1, training=training)
+
+        # out1 = self.layernorm1(attn1 + x)
 
         attn2, attn_weights_block2 = self.mha2(
             enc_output, enc_output, out1, padding_mask, training=training)  # (batch_size, target_seq_len, d_model)
         attn2 = self.dropout2(attn2, training=training)
-        out2 = self.layernorm2(attn2 + out1)  # (batch_size, target_seq_len, d_model)
-        out2 = self.dropout5(out2, training=training)
+
+        attn2 = self.__dense2(attn2)
+        attn2 = self.dropout5(attn2, training=training)
+        out2 = attn2 + x
+        # out2 = self.dropout5(out2, training=training)
+
+        # out2 = self.layernorm2(attn2 + out1)  # (batch_size, target_seq_len, d_model)
 
         ffn_output = self.ffn(out2, training=training)  # (batch_size, target_seq_len, d_model)
         ffn_output = self.dropout3(ffn_output, training=training)
+
+        # attn3 = self.__dense 3(ffn_output)
+        # out3 = ffn_output + out2
+
         out3 = self.layernorm3(ffn_output + out2)  # (batch_size, target_seq_len, d_model)
-        out3 = self.dropout6(out3, training=training)
+        # out3 = self.dropout6(out3, training=training)
 
         return out3, attn_weights_block1, attn_weights_block2
 
@@ -233,10 +264,10 @@ class Encoder(layers.Layer):
         else:
             self.pos_encoding = positional_encoding(maximum_position_encoding, input_vocab_size)
 
-        self.__dense = layers.Dense(d_model, activation='tanh')
-        self.__dropout_2 = layers.Dropout(drop_rate)
+        # self.__dense = layers.Dense(d_model, activation='tanh')
+        # self.__dropout_2 = layers.Dropout(drop_rate)
 
-        self.enc_layers = [EncoderLayer(d_model, num_heads, d_ff, drop_rate)
+        self.enc_layers = [EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate)
                            for _ in range(num_layers)]
 
         self.dropout = layers.Dropout(drop_rate)
@@ -259,8 +290,8 @@ class Encoder(layers.Layer):
 
         x = self.dropout(x, training=training)
 
-        x = self.__dense(x)
-        x = self.__dropout_2(x, training=training)
+        # x = self.__dense(x)
+        # x = self.__dropout_2(x, training=training)
 
         for i in range(self.num_layers):
             x = self.enc_layers[i](x, training, mask)
@@ -284,14 +315,14 @@ class Decoder(layers.Layer):
         else:
             self.pos_encoding = positional_encoding(maximum_position_encoding, target_vocab_size)
 
-        self.__dense = layers.Dense(d_model, activation='tanh')
-        self.__dropout_2 = layers.Dropout(drop_rate)
+        # self.__dense = layers.Dense(d_model, activation='tanh')
+        # self.__dropout_2 = layers.Dropout(drop_rate)
 
-        self.dec_layers = [DecoderLayer(d_model, num_heads, d_ff, drop_rate)
+        self.dec_layers = [DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate)
                            for _ in range(num_layers)]
         self.dropout = layers.Dropout(drop_rate)
 
-    def call(self, x, enc_output, training, look_ahead_mask, padding_mask):
+    def call(self, x, enc_output, end_pos, training, look_ahead_mask, padding_mask):
         seq_len = tf.shape(x)[1]
         attention_weights = {}
 
@@ -303,12 +334,17 @@ class Decoder(layers.Layer):
         else:
             x = tf.cast(x, tf.float32)
 
-        x += self.pos_encoding[:, :seq_len, :]
+        time_steps = enc_output.shape[1]
+        end_pos = tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, time_steps), axis=-1), axis=1)
+        pos_embeddings = tf.expand_dims(tf.reduce_sum(self.pos_encoding[:, :time_steps, :] * end_pos, axis=1), axis=1)
+        x += pos_embeddings
+
+        # x += self.pos_encoding[:, :seq_len, :]
 
         x = self.dropout(x, training=training)
-
-        x = self.__dense(x)
-        x = self.__dropout_2(x, training=training)
+        #
+        # x = self.__dense(x)
+        # x = self.__dropout_2(x, training=training)
 
         for i in range(self.num_layers):
             x, block1, block2 = self.dec_layers[i](x, enc_output, training,
@@ -351,7 +387,7 @@ class Transformer(keras.Model):
         return enc_padding_mask, combined_mask, dec_padding_mask
 
     def call(self, inputs, training=None):
-        inp, tar = inputs
+        inp, tar, end_pos = inputs
         # tar = tf.reshape(tar, [tar.shape[0], 1, tar.shape[-1]])
         enc_padding_mask, look_ahead_mask, dec_padding_mask = self.__create_masks(inp, tar)
 
@@ -359,7 +395,7 @@ class Transformer(keras.Model):
 
         # dec_output.shape == (batch_size, tar_seq_len, d_model)
         dec_output, attention_weights = self.decoder(
-            tar, enc_output, training, look_ahead_mask, dec_padding_mask)
+            tar, enc_output, end_pos, training, look_ahead_mask, dec_padding_mask)
 
         final_output = self.final_layer(dec_output)  # (batch_size, tar_seq_len, target_vocab_size)
 

@@ -11,7 +11,7 @@ layers = keras.layers
 class Model(NN):
     params = {
         **NN.default_params,
-        'learning_rate': 1e-3,
+        'learning_rate': 2e-4,
         'emb_dim': 128,
         'dim_model': 128,
         'ff_units': 128,
@@ -28,7 +28,7 @@ class Model(NN):
         'monitor': 'val_tf_f1',
         'monitor_mode': 'max',
         'monitor_start_train': 'tf_accuracy',
-        'monitor_start_train_val': 0.70,
+        'monitor_start_train_val': 0.90,
         'dropout': 0.1,
         # 'kernel_initializer': 'glorot_uniform',
         # 'loss': 'categorical_crossentropy',
@@ -93,5 +93,5 @@ class Model(NN):
     def predict(self, x):
         return self.model.predict(x, batch_size=self.params['batch_size'])
 
-    def test(self, train_x, train_y_one_hot, val_x, val_y_one_hot, mask=None, name='val'):
-        return self.test_in_batch(val_x, val_y_one_hot, mask, name)
+    def test(self, train_x, train_y_one_hot, val_x, val_y_one_hot, mask=None, name='val', data_size=None):
+        return self.test_in_batch(val_x, val_y_one_hot, mask, name, data_size)

@@ -25,24 +25,28 @@ for i, val in enumerate(data):
     model_name = val[0]
     group_name = val[1]
     group_file_name = val[3]
-    
-    if 'Spectral_Clustering' in group_name:
-        if '_with_model_input_features' in group_name:
+
+    if 'spectral_clustering' in group_name.lower():
+        if '_with_patterns_info' in group_name:
             group_name = 'SC_trace'
         else:
             group_name = 'SC'
     else:
-        group_name = 'K-means'
+        group_name = 'k_means'
 
-    group_index = group_file_name.split('_')[1]
+    # if group_file_name[0] == 'i':
+    #     continue
+
+    group_index = group_file_name.split('_')[1] if group_file_name[0] == 'g' else group_file_name
     test_f1 = val[19]
 
-    if group_name == 'SC_trace':
+    if group_name == 'k_means':
         voc_size = val[8]
         # train_size =
         train_label_cardinality = val[4]
         train_label_density = val[6]
-        individual_exp_dict[group_index] = [group_index, voc_size, train_label_cardinality, train_label_density, test_f1]
+        individual_exp_dict[group_index] = [group_index, voc_size, train_label_cardinality, train_label_density,
+                                            test_f1]
 
         if group_index[0] == 'i':
             continue
@@ -50,10 +54,10 @@ for i, val in enumerate(data):
     data_key = (group_name, group_index)
     if data_key not in data_result_dict:
         data_result_dict[data_key] = val[4:12]
-        
+
     if model_name not in experiment_result_dict:
         experiment_result_dict[model_name] = {}
-        
+
     if data_key not in experiment_result_dict[model_name]:
         experiment_result_dict[model_name][data_key] = test_f1
 
@@ -70,7 +74,7 @@ data_keys = list(map(lambda x: x[0], data_keys))
 # data_keys.sort()
 
 groups = list(map(lambda x: x[0] + ':' + x[1], data_keys))
-experiments_csv = 'model_name,' + ','.join(groups) + ',SC_trace_avg\n'
+experiments_csv = 'model_name,' + ','.join(groups) + ',k_means_avg\n'
 
 for i, val in enumerate(data_keys):
     data_csv += groups[i] + ',' + ','.join(list(map(str, data_result_dict[val]))) + '\n'
@@ -94,14 +98,13 @@ for model_name in models:
             score = experiment_result_dict[model_name][val]
             tmp_exp_str += str(score)
 
-            if val[0] == 'SC_trace':
+            if val[0] == 'k_means':
                 SC_trace_avg += float(score)
                 c += 1
         else:
             tmp_exp_str += '-'
     SC_trace_avg = SC_trace_avg / c
     experiments_csv += tmp_exp_str + f',{SC_trace_avg}\n'
-
 
 with open(os.path.join(root_dir, 'runtime', 'groups.csv'), 'wb') as f:
     f.write(data_csv.encode('utf-8'))
@@ -114,5 +117,3 @@ with open(os.path.join(root_dir, 'runtime', 'experiments_of_test_f1_for_individu
 
 # print(data.columns)
 # print(data)
-
-

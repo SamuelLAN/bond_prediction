@@ -1,6 +1,10 @@
 import os
+import sys
 
 cur_path = os.path.split(os.path.abspath(__file__))[0]
+root_path = os.path.split(cur_path)[0]
+
+sys.path.append(root_path)
 
 import numpy as np
 from gensim import corpora
@@ -161,8 +165,17 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
     X = []
     X_mask = []
     Y = []
+    file_no = 0
+    data_size = 0
 
+    length_d_dealers = len(d_dealer_for_gen_input)
+    progress_i = 0
     for dealer_index, val in d_dealer_for_gen_input.items():
+        if progress_i % 2 == 0:
+            progress = float(progress_i + 1) / length_d_dealers * 100.
+            print('\rprogress: %.2f%% ' % progress, end='')
+        progress_i += 1
+
         if dealer_index not in d_dealer_index_2_group_label or \
                 (not get_all and d_dealer_index_2_group_label[dealer_index] != group_index):
             continue
@@ -189,6 +202,8 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
                                                                                       end_date,
                                                                                       with_day_off,
                                                                                       buy_sell_plan)
+
+        del date_matrix
 
         # according to the transaction history, fill the data into date structure
         for i, trace in enumerate(trace_list):
@@ -227,9 +242,26 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
                 X_mask += input_mask_list
                 Y += output_list
 
+        if len(X_mask) >= 2000 and save_path:
+            len_X = len(X_mask)
+            num_files = int(len_X / 2000)
+            for i in range(num_files):
+                start_index = i * 2000
+                end_index = (i + 1) * 2000
+                utils.write_pkl(save_path + f'_{file_no}.pkl', [
+                    np.asarray(X_mask[start_index: end_index], dtype=np.int32),
+                    np.asarray(Y[start_index: end_index], dtype=np.int32)
+                ])
+                file_no += 1
+
+            data_size += num_files * 2000
+            X_mask = X_mask[num_files * 2000:]
+            Y = Y[num_files * 2000:]
+
         # d_dealer_index_2_trace_list_ordered[dealer_index] = [date_matrix, date_mask]
 
-    if save_path:
+    if save_path and len(X_mask):
+        data_size += len(X_mask)
         del d_dealer_for_gen_input
         del d_dealer_index_2_group_label
         del X
@@ -239,15 +271,21 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
 
         print('\n------------------------------')
         # print(len(X))
-        print(X_mask.shape)
-        print(Y.shape)
+        print(data_size)
+        X_mask_shape = list(X_mask.shape)
+        Y_shape = list(Y.shape)
+        X_mask_shape[0] = data_size
+        Y_shape[0] = data_size
+        print(X_mask_shape)
+        print(Y_shape)
 
         len_X = len(X_mask)
         num_files = int(np.ceil(len_X / 2000.))
         for i in range(num_files):
             start_index = i * 2000
             end_index = (i + 1) * 2000
-            utils.write_pkl(save_path + f'_{i}.pkl', [X_mask[start_index: end_index], Y[start_index: end_index]])
+            utils.write_pkl(save_path + f'_{file_no}.pkl', [X_mask[start_index: end_index], Y[start_index: end_index]])
+            file_no += 1
 
     # return d_dealer_index_2_trace_list_ordered
     return X_mask, Y
@@ -256,7 +294,7 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
 group_name = 'group_Spectral_Clustering_filter_lower_5_with_model_input_features.json'
 param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
 group_index = 3
-is_train = True
+is_train = False
 get_all = True
 if get_all:
     group_index = 'all'

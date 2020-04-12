@@ -12,6 +12,10 @@ TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'pkl')
 DICT_BOND_ID_2_INDEX_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_id_2_index.json')
 DICT_BOND_INDEX_2_ID_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_index_2_id.json')
 
+D_DEALERS_TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'd_dealers_trace')
+
+PROCESSED_DIR = os.path.join(DATA_ROOT_DIR, 'processed')
+
 # ------------------------------- model -------------------------------------
 
 TRAIN_MODEL_NAME = MODEL_NAME
@@ -53,6 +57,7 @@ def mk_if_not_exist(dir_path_list):
 
 
 mk_if_not_exist([
+    D_DEALERS_TRACE_DIR,
     __RUNTIME_DIR,
     __PATH_MODEL_DIR,
     PATH_MODEL_DIR,

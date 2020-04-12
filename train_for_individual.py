@@ -15,9 +15,11 @@ if gpus:
         print(e)
 
 import time
+import sys
 import json
 import warnings
 import numpy as np
+import os
 
 warnings.filterwarnings('ignore')
 
@@ -35,12 +37,12 @@ class Train:
     MODEL_CLASS = Model
     MODEL_DIR = TIME_DIR
 
-    def __init__(self, use_generator=False):
+    def __init__(self, _group_path, use_generator=False):
         self.__use_generator = use_generator
 
         # initialize data instances
-        self.__train_load = Loader(group_path, buffer_size=20000, prefix='train')
-        self.__test_load = Loader(group_path, prefix='test')
+        self.__train_load = Loader(_group_path, buffer_size=20000, prefix='train')
+        self.__test_load = Loader(_group_path, prefix='test')
 
         if not self.__use_generator:
             self.__X_train, self.__y_train = self.__train_load.all()
@@ -112,20 +114,20 @@ class Train:
         print('\nFinish training\n')
 
         dealers_result_dict = {}
-        test_dealers = self.__test_load.dealers
-        len_dealers = len(test_dealers)
-        for i, dealer_index in enumerate(test_dealers):
-            if i % 2 == 0:
-                progress = float(i + 1) / len_dealers * 100.
-                print('\rprogress: %.2f%% ' % progress, end='')
-
-            batch_x, batch_y = self.__test_load.get_dealer(dealer_index)
-            batch_end_pos = self.__calulate_last_pos(batch_x)
-            batch_input = [batch_x, batch_x[:, :1], batch_end_pos]
-
-            tmp_dealer_result_dict = model.test_in_batch(batch_input, batch_y,
-                                                         name=f'dealer_{dealer_index}', data_size=len(batch_x))
-            dealers_result_dict[dealer_index] = tmp_dealer_result_dict
+        # test_dealers = self.__test_load.dealers
+        # len_dealers = len(test_dealers)
+        # for i, dealer_index in enumerate(test_dealers):
+        #     if i % 2 == 0:
+        #         progress = float(i + 1) / len_dealers * 100.
+        #         print('\rprogress: %.2f%% ' % progress, end='')
+        #
+        #     batch_x, batch_y = self.__test_load.get_dealer(dealer_index)
+        #     batch_end_pos = self.__calulate_last_pos(batch_x)
+        #     batch_input = [batch_x, batch_x[:, :1], batch_end_pos]
+        #
+        #     tmp_dealer_result_dict = model.test_in_batch(batch_input, batch_y,
+        #                                                  name=f'dealer_{dealer_index}', data_size=len(batch_x))
+        #     dealers_result_dict[dealer_index] = tmp_dealer_result_dict
 
         # show results
         self.__log_results(self.MODEL_DIR, train_result_dict, val_result_dict, test_result_dict,
@@ -143,8 +145,9 @@ class Train:
          as well as the model params to console and save them to the log file.
         """
 
-        dealer_results = list(map(lambda x: f'{x[0]}: {x[1]}', dealer_result_dict.items()))
-        dealer_results = '\n'.join(dealer_results)
+        dealer_results = 'self'
+        # dealer_results = list(map(lambda x: f'{x[0]}: {x[1]}', dealer_result_dict.items()))
+        # dealer_results = '\n'.join(dealer_results)
 
         data = (path.MODEL_NAME,
                 model_time,
@@ -204,13 +207,27 @@ class Train:
 
         output_and_log(path.PATH_CSV_LOG, csv_string, csv_headline)
 
-
-o_train = Train(use_generator=True)
-o_train.run()
-
-# 2020_04_04_23_04_33
-# 2020_04_05_05_41_22
-# 2020_04_05_11_06_34
-# 2020_04_05_12_57_23
-
-# 2020_04_09_12_33_13
+# if __name__ == '__main__':
+#
+#     group_dir = os.path.split(group_path)[0]
+#     dir_list = list(filter(lambda x: x[0].lower() == 'i', os.listdir(group_dir)))
+#     len_dir = len(dir_list)
+#
+#     for i, dealer_index in enumerate(dir_list):
+#         if dealer_index < 'i1156':
+#             continue
+#
+#         print('\n\n--------------------------------------------------')
+#         print(f'training model for ### {dealer_index} ### ')
+#         print('---------------------------------------------------\n')
+#
+#         LOG['group_file_name'] = dealer_index
+#         Train.MODEL_DIR = TIME_DIR = time.strftime('%Y_%m_%d_%H_%M_%S')
+#
+#         tmp_group_path = os.path.join(group_dir, dealer_index)
+#         o_train = Train(_group_path=tmp_group_path, use_generator=False)
+#         o_train.run()
+#         del o_train
+#
+#     # 2020_04_04_23_04_33
+#     # 2020_04_05_05_41_22
