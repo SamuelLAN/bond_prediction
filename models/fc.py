@@ -15,7 +15,7 @@ class Model(NN):
         'emb_dim': 128,
         'unit_list': [128, 128],
         'mode': 'concat',
-        'use_embeddings': False,
+        'use_embeddings': True,
         'batch_size': 64,
         'epoch': 3000,
         'early_stop': 30,
