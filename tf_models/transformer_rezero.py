@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import random
 
 keras = tf.keras
 layers = keras.layers
@@ -145,7 +146,12 @@ class EncoderLayer(layers.Layer):
         else:
             self.ffn = point_wise_feed_forward_network(input_dim, d_ff, drop_rate)
 
-        self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
+        # self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
+
+        self.__alpha_1 = tf.Variable(0,
+                                     trainable=True, name='alpha_1', dtype=tf.float32)
+        self.__alpha_2 = tf.Variable(0,
+                                     trainable=True, name='alpha_2', dtype=tf.float32)
 
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
@@ -159,20 +165,22 @@ class EncoderLayer(layers.Layer):
     def call(self, x, training, mask):
         attn_output, _ = self.mha(x, x, x, mask, training=training)  # (batch_size, input_seq_len, d_model)
         attn_output = self.dropout1(attn_output, training=training)
+        out1 = self.__alpha_1 * attn_output + x
 
-        attn_output = self.__dense1(attn_output)
-        attn_output = self.dropout3(attn_output, training=training)
-        out1 = attn_output + x
+        # attn_output = self.__dense1(attn_output)
+        # attn_output = self.dropout3(attn_output, training=training)
+        # out1 = attn_output + x
         # out1 = self.dropout3(out1, training=training)
 
         # out1 = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, d_model)
 
         ffn_output = self.ffn(out1, training=training)  # (batch_size, input_seq_len, d_model)
         ffn_output = self.dropout2(ffn_output, training=training)
-        out2 = self.layernorm2(out1 + ffn_output)  # (batch_size, input_seq_len, d_model)
+        # out2 = self.layernorm2(out1 + ffn_output)  # (batch_size, input_seq_len, d_model)
+        out2 = self.__alpha_2 * ffn_output + out1
         # out2 = self.dropout4(out2, training=training)
 
-        return out2
+        return out2, out1
 
 
 class DecoderLayer(layers.Layer):
@@ -187,9 +195,16 @@ class DecoderLayer(layers.Layer):
         else:
             self.ffn = point_wise_feed_forward_network(input_dim, d_ff, drop_rate)
 
-        self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
-        self.__dense2 = layers.Dense(input_dim if not use_embeddings else d_model)
-        self.__dense3 = layers.Dense(input_dim if not use_embeddings else d_model)
+        # self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
+        # self.__dense2 = layers.Dense(input_dim if not use_embeddings else d_model)
+        # self.__dense3 = layers.Dense(input_dim if not use_embeddings else d_model)
+
+        self.__alpha_1 = tf.Variable(0,
+                                     trainable=True, name='alpha_1', dtype=tf.float32)
+        self.__alpha_2 = tf.Variable(0,
+                                     trainable=True, name='alpha_2', dtype=tf.float32)
+        self.__alpha_3 = tf.Variable(0,
+                                     trainable=True, name='alpha_3', dtype=tf.float32)
 
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
@@ -210,9 +225,10 @@ class DecoderLayer(layers.Layer):
                                                training=training)  # (batch_size, target_seq_len, d_model)
         attn1 = self.dropout1(attn1, training=training)
 
-        attn1 = self.__dense1(attn1)
-        attn1 = self.dropout4(attn1, training=training)
-        out1 = attn1 + x
+        # attn1 = self.__dense1(attn1)
+        # attn1 = self.dropout4(attn1, training=training)
+        # out1 = attn1 + x
+        out1 = self.__alpha_1 * attn1 + x
         # out1 = self.dropout4(out1, training=training)
 
         # out1 = self.layernorm1(attn1 + x)
@@ -221,9 +237,10 @@ class DecoderLayer(layers.Layer):
             enc_output, enc_output, out1, padding_mask, training=training)  # (batch_size, target_seq_len, d_model)
         attn2 = self.dropout2(attn2, training=training)
 
-        attn2 = self.__dense2(attn2)
-        attn2 = self.dropout5(attn2, training=training)
-        out2 = attn2 + x
+        # attn2 = self.__dense2(attn2)
+        # attn2 = self.dropout5(attn2, training=training)
+        # out2 = attn2 + x
+        out2 = self.__alpha_2 * attn2 + x
         # out2 = self.dropout5(out2, training=training)
 
         # out2 = self.layernorm2(attn2 + out1)  # (batch_size, target_seq_len, d_model)
@@ -234,10 +251,11 @@ class DecoderLayer(layers.Layer):
         # attn3 = self.__dense 3(ffn_output)
         # out3 = ffn_output + out2
 
-        out3 = self.layernorm3(ffn_output + out2)  # (batch_size, target_seq_len, d_model)
+        # out3 = self.layernorm3(ffn_output + out2)  # (batch_size, target_seq_len, d_model)
+        out3 = self.__alpha_3 * ffn_output + out2
         # out3 = self.dropout6(out3, training=training)
 
-        return out3, attn_weights_block1, attn_weights_block2
+        return out3, attn_weights_block1, attn_weights_block2, out1, out2
 
 
 def get_emb(x_mask, emb_layer, ranges):
@@ -267,8 +285,14 @@ class Encoder(layers.Layer):
         # self.__dense = layers.Dense(d_model, activation='tanh')
         # self.__dropout_2 = layers.Dropout(drop_rate)
 
-        self.enc_layers = [EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate)
-                           for _ in range(num_layers)]
+        self.enc_layers = []
+        for i in range(num_layers):
+            with tf.name_scope(f'encoder_layer_{i}'):
+                self.enc_layers.append(
+                    EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate))
+
+        # self.enc_layers = [EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate)
+        #                    for _ in range(num_layers)]
 
         self.dropout = layers.Dropout(drop_rate)
 
@@ -294,10 +318,12 @@ class Encoder(layers.Layer):
         # x = self.__dense(x)
         # x = self.__dropout_2(x, training=training)
 
+        out1_list = []
         for i in range(self.num_layers):
-            x = self.enc_layers[i](x, training, mask)
+            x, out1 = self.enc_layers[i](x, training, mask)
+            out1_list.append(out1)
 
-        return x  # (batch_size, input_seq_len, d_model)
+        return x, out1_list  # (batch_size, input_seq_len, d_model)
 
 
 class Decoder(layers.Layer):
@@ -322,8 +348,14 @@ class Decoder(layers.Layer):
         # self.__dense = layers.Dense(d_model, activation='tanh')
         # self.__dropout_2 = layers.Dropout(drop_rate)
 
-        self.dec_layers = [DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate)
-                           for _ in range(num_layers)]
+        self.dec_layers = []
+        for i in range(num_layers):
+            with tf.name_scope(f'decoder_layer_{i}'):
+                self.dec_layers.append(
+                    DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate))
+
+        # self.dec_layers = [DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate)
+        #                    for _ in range(num_layers)]
         self.dropout = layers.Dropout(drop_rate)
 
     def call(self, x, enc_output, end_pos, training, look_ahead_mask, padding_mask):
@@ -339,7 +371,8 @@ class Decoder(layers.Layer):
             x = tf.cast(x, tf.float32)
 
         time_steps = enc_output.shape[1]
-        end_pos = tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, time_steps), axis=-1), axis=1)
+        end_pos = tf.expand_dims(tf.one_hot(end_pos, time_steps), axis=-1)
+        # end_pos = tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, time_steps), axis=-1), axis=1)
         pos_embeddings = tf.expand_dims(tf.reduce_sum(self.pos_encoding[:, :time_steps, :] * end_pos, axis=1), axis=1)
         x += pos_embeddings
 
@@ -350,14 +383,18 @@ class Decoder(layers.Layer):
         # x = self.__dense(x)
         # x = self.__dropout_2(x, training=training)
 
+        out1_list = []
+        out2_list = []
         for i in range(self.num_layers):
-            x, block1, block2 = self.dec_layers[i](x, enc_output, training,
+            x, block1, block2, out1, out2  = self.dec_layers[i](x, enc_output, training,
                                                    look_ahead_mask, padding_mask)
             attention_weights['decoder_layer{}_block1'.format(i + 1)] = block1
             attention_weights['decoder_layer{}_block2'.format(i + 1)] = block2
+            out1_list.append(out1)
+            out2_list.append(out2)
 
         # x.shape == (batch_size, target_seq_len, d_model)
-        return x, attention_weights
+        return x, attention_weights, out1_list, out2_list
 
 
 class Transformer(keras.Model):
@@ -366,11 +403,13 @@ class Transformer(keras.Model):
                  share_embeddings=True):
         super(Transformer, self).__init__()
 
-        self.encoder = Encoder(num_layers, d_model, num_heads, d_ff,
-                               input_vocab_size, max_pe_input, drop_rate, use_embeddings)
+        with tf.name_scope('Encoder'):
+            self.encoder = Encoder(num_layers, d_model, num_heads, d_ff,
+                                   input_vocab_size, max_pe_input, drop_rate, use_embeddings)
 
-        self.decoder = Decoder(num_layers, d_model, num_heads, d_ff,
-                               target_vocab_size, max_pe_target, drop_rate, use_embeddings)
+        with tf.name_scope('Decoder'):
+            self.decoder = Decoder(num_layers, d_model, num_heads, d_ff,
+                                   target_vocab_size, max_pe_target, drop_rate, use_embeddings)
 
         self.final_layer = layers.Dense(target_vocab_size, activation='tanh')
 
@@ -391,19 +430,23 @@ class Transformer(keras.Model):
 
         return enc_padding_mask, combined_mask, dec_padding_mask
 
-    def call(self, inputs, training=None):
+    def call(self, inputs, training=None, get_more=False):
         inp, tar, end_pos = inputs
         # tar = tf.reshape(tar, [tar.shape[0], 1, tar.shape[-1]])
         enc_padding_mask, look_ahead_mask, dec_padding_mask = self.__create_masks(inp, tar)
 
-        enc_output = self.encoder(inp, training, enc_padding_mask)  # (batch_size, inp_seq_len, d_model)
+        enc_output, out1_list_enc = self.encoder(inp, training, enc_padding_mask)  # (batch_size, inp_seq_len, d_model)
 
         # dec_output.shape == (batch_size, tar_seq_len, d_model)
-        dec_output, attention_weights = self.decoder(
+        dec_output, attention_weights, out1_list_dec, out2_list_dec = self.decoder(
             tar, enc_output, end_pos, training, look_ahead_mask, dec_padding_mask)
 
         final_output = self.final_layer(dec_output)  # (batch_size, tar_seq_len, target_vocab_size)
 
         final_output = tf.squeeze(final_output, axis=1)
         # return final_output, attention_weights
-        return final_output
+
+        if get_more:
+            return final_output, out1_list_enc, out1_list_dec, out2_list_dec
+        else:
+            return final_output

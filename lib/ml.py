@@ -240,7 +240,9 @@ class Visual:
 
     @staticmethod
     def spots(X, Y, labels, title='', x_label='', y_label='', x_ticks=None, y_ticks=None, save_path='',
-              show=True, spot_size=1, new_pic=True, close_pic=True, legend=True):
+              show=True, spot_size=1, new_pic=True, close_pic=True, legend=True,
+              dict_label_2_size={}, dict_label_2_marker={}, dict_label_2_color={}, legend_size=20,
+              x_log=False, y_log=False, label_size=30):
         X = np.array(X)
         Y = np.array(Y)
 
@@ -251,27 +253,51 @@ class Visual:
             plt.scatter(X, Y, s=spot_size, label=labels)
         else:
             label_set = set(labels)
+            label_set = list(label_set)
+            label_set.sort()
             for label in label_set:
-                indices = np.argwhere(labels == label)
+                indices = np.argwhere(np.array(labels) == label)
                 x = X[indices]
                 y = Y[indices]
-                plt.scatter(x, y, s=spot_size, label=str(label))
+
+                if dict_label_2_size and label in dict_label_2_size:
+                    spot_size = dict_label_2_size[label]
+
+                marker = 'o'
+                if dict_label_2_marker and label in dict_label_2_marker:
+                    marker = dict_label_2_marker[label]
+
+                color = None
+                if dict_label_2_color and label in dict_label_2_color:
+                    color = dict_label_2_color[label]
+
+                plt.scatter(x, y, s=spot_size, marker=marker, color=color, label=str(label))
 
         if title:
             plt.title(title)
         if x_label:
-            plt.xlabel(x_label)
+            plt.xlabel(x_label, fontsize=label_size)
         if y_label:
-            plt.ylabel(y_label)
+            plt.ylabel(y_label, fontsize=label_size)
 
         if not isinstance(x_ticks, type(None)):
-            plt.xticks(x_ticks)
+            plt.xticks(x_ticks, fontsize=legend_size)
+        else:
+            plt.xticks(fontsize=legend_size)
         if not isinstance(y_ticks, type(None)):
-            plt.yticks(y_ticks)
+            plt.yticks(y_ticks, fontsize=legend_size)
+        else:
+            plt.yticks(fontsize=legend_size)
+
+        if x_log:
+            plt.xscale('log')
+        if y_log:
+            plt.yscale('log')
+
         if legend:
-            plt.legend()
+            plt.legend(fontsize=legend_size)
         if save_path:
-            plt.savefig(save_path, dpi=300)
+            plt.savefig(save_path, dpi=400)
         if show:
             plt.show()
         if close_pic:

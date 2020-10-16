@@ -21,8 +21,8 @@ class BiLSTM(keras.Model):
         self.__dropout_1 = layers.Dropout(dropout_rate)
         lstm_1 = layers.LSTM(hidden_units, return_sequences=True, return_state=True, dropout=dropout_rate)
         self.__lstm_1 = layers.Bidirectional(lstm_1)
-        self.__dropout_2_1 = layers.Dropout(dropout_rate)
-        self.__dropout_2_2 = layers.Dropout(dropout_rate)
+        # self.__dropout_2_1 = layers.Dropout(dropout_rate)
+        # self.__dropout_2_2 = layers.Dropout(dropout_rate)
 
         lstm_2 = layers.LSTM(hidden_units, dropout=dropout_rate)
         self.__lstm_2 = layers.Bidirectional(lstm_2)

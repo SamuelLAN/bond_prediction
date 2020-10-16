@@ -12,6 +12,26 @@ from config import path, date
 from lib import utils
 
 
+def __get_risk(_trace_list):
+    _dict_date_2_volume = {}
+    for _l in list(filter(lambda a: a[2][-1] == 'C', _trace_list)):
+        _tmp_date = _l[-1]
+        _tmp_type = _l[2]
+        _tmp_volume = _l[1]
+
+        if _tmp_date not in _dict_date_2_volume:
+            _dict_date_2_volume[_tmp_date] = {'buy': 0, 'sell': 0}
+        if _tmp_type[0] == 'B':
+            _dict_date_2_volume[_tmp_date]['buy'] += _tmp_volume
+        elif _tmp_type[0] == 'S':
+            _dict_date_2_volume[_tmp_date]['sell'] += _tmp_volume
+
+    _tmp_volume_list = list(map(lambda a: a[1], _dict_date_2_volume.items()))
+    _tmp_volume_list = list(
+        map(lambda a: 2 * min(a['buy'], a['sell']) / (a['buy'] + a['sell'] + 0.001), _tmp_volume_list))
+    return np.sum(_tmp_volume_list)
+
+
 def load_l_dealers(_suffix='date', use_cache=True):
     print('\nloading data ... ')
 
@@ -82,6 +102,10 @@ def load_l_dealers(_suffix='date', use_cache=True):
         no_below_trace_count = 0
         no_below_volume = 0
 
+        no_below_client_volume = 0
+        no_below_dealer_volume = 0
+        _dict_no_below_date_2_volume = {}
+
         for i, v in enumerate(tmp_bond_indices):
             # if the bond not in the dictionary, then continue
             if v == -1:
@@ -89,16 +113,50 @@ def load_l_dealers(_suffix='date', use_cache=True):
             no_below_trace_count += 1
             no_below_volume += traces[i][1]
 
+            _l = traces[i]
+            _tmp_date = _l[-1]
+            _tmp_type = _l[2]
+            _tmp_volume = _l[1]
+
+            if _tmp_date not in _dict_no_below_date_2_volume:
+                _dict_no_below_date_2_volume[_tmp_date] = {'buy': 0, 'sell': 0}
+
+            if _tmp_type[-1] == 'C':
+                no_below_client_volume += _tmp_volume
+
+                if _tmp_type[0] == 'B':
+                    _dict_no_below_date_2_volume[_tmp_date]['buy'] += _tmp_volume
+                elif _tmp_type[0] == 'S':
+                    _dict_no_below_date_2_volume[_tmp_date]['sell'] += _tmp_volume
+
+            else:
+                no_below_dealer_volume += _tmp_volume
+
+        _tmp_no_below_volume_list = list(map(lambda a: a[1], _dict_no_below_date_2_volume.items()))
+        _tmp_no_below_volume_list = list(
+            map(lambda a: 2 * min(a['buy'], a['sell']) / (a['buy'] + a['sell'] + 0.001), _tmp_no_below_volume_list))
+        no_below_risk = np.sum(_tmp_no_below_volume_list)
+
         # filter dealers whose total transaction count is low or number of unique bonds is low after filtering
         if no_below_trace_count == 0 or no_below_num_bonds <= 5:
             continue
+
+        tmp_client_volume = np.sum(list(map(lambda x: x[1], list(filter(lambda a: a[2][-1] == 'C', traces)))))
+        tmp_dealer_volume = np.sum(list(map(lambda x: x[1], list(filter(lambda a: a[2][-1] == 'D', traces)))))
+        tmp_risk_volume = __get_risk(traces)
 
         # get the unique bonds
         bond_set = set(list(tmp_dictionary.values()))
 
         # save features that is needed for clustering
-        new_l = [_dealer_index, tmp_trace_count, tmp_volume, num_bonds, no_below_trace_count, no_below_volume,
-                 no_below_num_bonds, bond_set]
+        new_l = [
+            _dealer_index,
+            tmp_trace_count, tmp_volume, num_bonds,
+            no_below_trace_count, no_below_volume, no_below_num_bonds,
+            tmp_client_volume, tmp_dealer_volume, tmp_risk_volume,
+            no_below_client_volume, no_below_dealer_volume, no_below_risk,
+            bond_set
+        ]
 
         _l_dealers.append(new_l)
 
@@ -243,7 +301,7 @@ if __name__ == '__main__':
     d_dealer_file_name = f'd_dealers_2015_split_by_{suffix}.json'
 
     cluster_num = 4
-    group_type = f'k_means_cluster_{cluster_num}_split_by_{suffix}'
+    group_type = f'k_means_cluster_{cluster_num}_without_eco_feat_split_by_{suffix}'
     use_k_means = True
     use_spectral_clustering = False
     use_bond_overlap = False
@@ -261,42 +319,60 @@ if __name__ == '__main__':
     origin_l_dealers = origin_l_dealers[:240]
     print('\nTake the first 240 dealers ... ')
 
-    l_dealers = list(map(lambda x:
-                         # [x[0], np.log(x[4]), np.log10(x[5] + 1.1), x[6], x[7], x[8]],
-                         [x[0], np.log(x[1]), np.log10(x[2]), x[3], np.log(x[4]), np.log10(x[5] + 1.1), x[6], x[7],
-                          x[8]],
-                         origin_l_dealers))
-
-    # l_dealers = list(map(lambda x: [x[0], x[1], np.log10(x[2]), x[3], x[4], np.log10(x[5] + 1.1), x[6], x[7]], l_dealers))
-
-    print('Normalizing ...')
-
-    # normalize
-    points = np.array(list(map(lambda x: x[1:-2], l_dealers)))
-    points = (points - np.mean(points, axis=0)) / np.std(points, axis=0)
-    points = points / (np.max(points, axis=0) - np.min(points, axis=0))
-
-    l_dealers = np.array(l_dealers)
-
-    print('Clustering ...')
-
-    # clustering
-    if use_spectral_clustering:
-        if not use_bond_overlap and not use_pattern_info:
-            ret = SpectralClustering(n_clusters=cluster_num).fit(points)
-            labels = ret.labels_
-
-        else:
-            A = __similarity(l_dealers[:, 1:], use_bond_overlap=use_bond_overlap, use_pattens=use_pattern_info)
-            labels = spectral_clustering(A, n_clusters=cluster_num)
-    else:
-        ret = KMeans(n_clusters=cluster_num).fit(points)
-        labels = ret.labels_
-
-    print('Reducing dimensions ...')
-
-    d_dealers_2_group = {}
-
+    origin_l_dealers = list(filter(lambda x: x[10] and x[11], origin_l_dealers))
+    #
+    # l_dealers = list(map(lambda x:
+    #                      # [x[0], np.log(x[4]), np.log10(x[5] + 1.1), x[6], x[7], x[8]],
+    #                      [
+    #                          x[0],  # dealer index
+    #                          np.log(x[1]),  # total transaction count without filtering
+    #                          np.log10(x[2]),  # total volume without filtering
+    #                          x[3],  # num of distinct bond without filtering
+    #                          np.log(x[4]),  # total transaction count after filtering
+    #                          np.log10(x[5] + 1.1),  # total volume after filtering
+    #                          x[6],  # num of distinct bond after filtering
+    #                          np.log10(x[7]),  # total client volume without filtering
+    #                          np.log10(x[8]),  # total dealer volume without filtering
+    #                          x[9],  # total risk without filtering
+    #                          np.log10(x[10]),  # total client volume after filtering
+    #                          np.log10(x[11]),  # total dealer volume after filtering
+    #                          x[12],  # total risk after filtering
+    #                          x[13],  # bond set
+    #                          x[14],  # input matrix
+    #                      ],
+    #                      origin_l_dealers))
+    #
+    # # l_dealers = list(map(lambda x: [x[0], x[1], np.log10(x[2]), x[3], x[4], np.log10(x[5] + 1.1), x[6], x[7]], l_dealers))
+    #
+    # print('Normalizing ...')
+    #
+    # # normalize
+    # # points = np.array(list(map(lambda x: x[1:-2], l_dealers)))
+    # points = np.array(list(map(lambda x: x[1:-2 - 6], l_dealers)))
+    # points = (points - np.mean(points, axis=0)) / (np.std(points, axis=0) + 0.001)
+    # points = points / (np.max(points, axis=0) - np.min(points, axis=0) + 0.001)
+    #
+    # l_dealers = np.array(l_dealers)
+    #
+    # print('Clustering ...')
+    #
+    # # clustering
+    # if use_spectral_clustering:
+    #     if not use_bond_overlap and not use_pattern_info:
+    #         ret = SpectralClustering(n_clusters=cluster_num).fit(points)
+    #         labels = ret.labels_
+    #
+    #     else:
+    #         A = __similarity(l_dealers[:, 1:], use_bond_overlap=use_bond_overlap, use_pattens=use_pattern_info)
+    #         labels = spectral_clustering(A, n_clusters=cluster_num)
+    # else:
+    #     ret = KMeans(n_clusters=cluster_num).fit(points)
+    #     labels = ret.labels_
+    #
+    # print('Reducing dimensions ...')
+    #
+    # d_dealers_2_group = {}
+    #
     # labels_path = utils.get_relative_file('runtime', 'k_means_4_cluster_labels.json')
     # eco_label_dict = utils.load_json(labels_path)
     # eco_labels = []
@@ -312,32 +388,36 @@ if __name__ == '__main__':
     #         eco_labels.append('peri')
     #     else:
     #         eco_labels.append(_tmp_label_val['core_peri_idb'])
+    #
+    # # save group information to file
+    # # utils.write_json(utils.get_relative_dir('groups', f'group_{group_type}.json'), d_dealers_2_group)
+    #
+    # # Dimension reduction so that it can be visualized
+    # visual_points = ReduceDim.tsne(points, len(points), n_components=2)
+    # # visual_points = ReduceDim.pca(points, 2)
+    # # visual_points = np.array(list(map(lambda x: x[1:-2], origin_l_dealers)))[:, [0, 5]]
+    #
+    # # utils.write_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph.pkl'), [visual_points, labels, eco_labels])
+    # # utils.write_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph_with_eco_feature.pkl'), [l_dealers, visual_points, labels, eco_labels])
+    # utils.write_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph_without_eco_feature.pkl'), [l_dealers, visual_points, labels, eco_labels])
 
-    # save group information to file
-    # utils.write_json(utils.get_relative_dir('groups', f'group_{group_type}.json'), d_dealers_2_group)
-
-    # Dimension reduction so that it can be visualized
-    visual_points = ReduceDim.tsne(points, len(points), n_components=2)
-    # visual_points = ReduceDim.pca(points, 2)
-    # visual_points = np.array(list(map(lambda x: x[1:-2], origin_l_dealers)))[:, [0, 5]]
-
-    utils.write_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph.pkl'), [visual_points, labels])
-    # utils.write_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph.pkl'), [visual_points, labels, eco_labels])
-
+    l_dealers, visual_points, labels, eco_labels = utils.load_pkl(
+        utils.get_relative_file('runtime', 'cache', 'tmp_graph_without_eco_feature.pkl'))
+    # l_dealers, visual_points, labels, eco_labels = utils.load_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph_with_eco_feature.pkl'))
     # visual_points, labels, eco_labels = utils.load_pkl(utils.get_relative_file('runtime', 'cache', 'tmp_graph.pkl'))
 
     print('Plotting ...')
 
     new_labels = []
     for i, v in enumerate(labels):
-        activity = 'less active'
+        activity = 'most active'
         v = int(v)
         if v == 3:
-            activity = 'least active'
+            activity = 'low active'
         elif v == 2:
-            activity = 'most active'
+            activity = 'high active'
         elif v == 0:
-            activity = 'more active'
+            activity = 'least active'
 
         # activity += f' ({eco_labels[i]})'
         new_labels.append(activity)
@@ -345,28 +425,34 @@ if __name__ == '__main__':
     # visualization
     # X, Y = list(zip(*visual_points))
 
+    # X = l_dealers[:, 4]
+    # Y = l_dealers[:, 6]
+
+    # X = list(map(lambda a: a[4], origin_l_dealers))
+    # Y = list(map(lambda a: a[6], origin_l_dealers))
+
     X = list(map(lambda a: a[1], origin_l_dealers))
     Y = list(map(lambda a: a[3], origin_l_dealers))
 
     # Visual.spots(X, Y, labels, f'{group_type} group dealers (t-sne visualization)',
     Visual.spots(X, Y, new_labels, '',
-                 spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_v3.png'),
+                 spot_size=1, save_path=utils.get_relative_dir('groups', f'group_{group_type}_x_trace_count_y_distinct_bond_count_log_scale_no_filtering_axis_no_eco_spot.png'),
                  dict_label_2_marker={
                      'least active': 'o',
-                     'less active': 'o',
-                     'more active': 'o',
+                     'low active': 'o',
+                     'high active': 'o',
                      'most active': 'o',
                  },
                  dict_label_2_size={
-                     'least active': 40,
-                     'less active': 40,
-                     'more active': 40,
-                     'most active': 40,
+                     'least active': 20,
+                     'low active': 20,
+                     'high active': 20,
+                     'most active': 20,
                  },
                  dict_label_2_color={
                      'least active': 'red',
-                     'less active': 'blue',
-                     'more active': 'green',
+                     'low active': 'blue',
+                     'high active': 'green',
                      'most active': 'black',
                  },
                  x_label='Count of Transaction (Log Scale)',
@@ -375,42 +461,51 @@ if __name__ == '__main__':
                  y_log=True,
                  legend_size=20
                  )
+
     # Visual.spots(X, Y, new_labels, '',
-    #              spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_v2.png'),
+    #              # spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_tsne_axis.png'),
+    #              spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_x_trace_count_y_distinct_bond_count_log_scale_no_filtering_axis.png'),
     #              dict_label_2_marker={
     #                  'least active (peri)': 'o',
-    #                  'least active (IDB)': 'd',
-    #                  'less active (peri)': 'o',
-    #                  'less active (IDB)': 'd',
-    #                  'more active (peri)': 'o',
-    #                  'more active (IDB)': 'd',
-    #                  'more active (core)': 'x',
+    #                  'least active (IDB)': 'x',
+    #                  'low active (peri)': 'o',
+    #                  'low active (IDB)': 'x',
+    #                  'high active (peri)': 'o',
+    #                  'high active (IDB)': 'x',
+    #                  'high active (core)': 'd',
     #                  'most active (peri)': 'o',
-    #                  'most active (IDB)': 'd',
-    #                  'most active (core)': 'x',
-    #              }, dict_label_2_size={
+    #                  'most active (IDB)': 'x',
+    #                  'most active (core)': 'd',
+    #              },
+    #              dict_label_2_size={
     #                  'least active (peri)': 6,
     #                  'least active (IDB)': 40,
-    #                  'less active (peri)': 6,
-    #                  'less active (IDB)': 40,
-    #                  'more active (peri)': 6,
-    #                  'more active (IDB)': 40,
-    #                  'more active (core)': 40,
+    #                  'low active (peri)': 6,
+    #                  'low active (IDB)': 40,
+    #                  'high active (peri)': 6,
+    #                  'high active (IDB)': 40,
+    #                  'high active (core)': 40,
     #                  'most active (peri)': 6,
     #                  'most active (IDB)': 40,
     #                  'most active (core)': 40,
-    #              }, dict_label_2_color={
+    #              },
+    #              dict_label_2_color={
     #                  'least active (peri)': 'red',
     #                  'least active (IDB)': 'red',
-    #                  'less active (peri)': 'blue',
-    #                  'less active (IDB)': 'blue',
-    #                  'more active (peri)': 'green',
-    #                  'more active (IDB)': 'green',
-    #                  'more active (core)': 'green',
+    #                  'low active (peri)': 'blue',
+    #                  'low active (IDB)': 'blue',
+    #                  'high active (peri)': 'green',
+    #                  'high active (IDB)': 'green',
+    #                  'high active (core)': 'green',
     #                  'most active (peri)': 'black',
     #                  'most active (IDB)': 'black',
     #                  'most active (core)': 'black',
-    #              }, legend_size=20)
+    #              },
+    #              x_label='Count of Transaction (Log Scale)',
+    #              y_label='Count of Distinct Bonds (Log Scale)',
+    #              x_log=True,
+    #              y_log=True,
+    #              legend_size=20)
 
     # Visual.spots(X, Y, np.array(eco_labels), f'{group_type} group dealers (eco labels) (t-sne visualization)',
     #              spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_eco_labels_v2.png'))

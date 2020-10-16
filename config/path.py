@@ -13,6 +13,7 @@ DICT_BOND_ID_2_INDEX_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_id_2_index.js
 DICT_BOND_INDEX_2_ID_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_index_2_id.json')
 
 D_DEALERS_TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'd_dealers_trace')
+D_BONDS_TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'd_bonds_trace')
 
 PROCESSED_DIR = os.path.join(DATA_ROOT_DIR, 'processed')
 
@@ -38,7 +39,9 @@ PATH_TMP_DIR = os.path.join(__RUNTIME_DIR, 'tmp')
 
 # the log file path, record all the models results and params
 PATH_MODEL_LOG = os.path.join(__RUNTIME_DIR, 'model.log')
+PATH_MODEL_LOG_DEALER = os.path.join(__RUNTIME_DIR, 'model_for_dealer_prediction.log')
 PATH_CSV_LOG = os.path.join(__RUNTIME_DIR, 'experiments.csv')
+PATH_CSV_LOG_DEALER = os.path.join(__RUNTIME_DIR, 'experiments_for_dealer_prediction.csv')
 
 
 def mkdir_time(upper_path, _time):
@@ -58,6 +61,7 @@ def mk_if_not_exist(dir_path_list):
 
 mk_if_not_exist([
     D_DEALERS_TRACE_DIR,
+    D_BONDS_TRACE_DIR,
     __RUNTIME_DIR,
     __PATH_MODEL_DIR,
     PATH_MODEL_DIR,

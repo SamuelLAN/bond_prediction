@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import random
 
 keras = tf.keras
 layers = keras.layers
@@ -147,6 +148,11 @@ class EncoderLayer(layers.Layer):
 
         self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
 
+        self.__alpha_1 = tf.Variable(tf.random.uniform((d_model,)),
+                                     trainable=True, name='alpha_1', dtype=tf.float32)
+        self.__alpha_2 = tf.Variable(tf.random.uniform((d_model,)),
+                                     trainable=True, name='alpha_2', dtype=tf.float32)
+
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
 
@@ -163,6 +169,7 @@ class EncoderLayer(layers.Layer):
         attn_output = self.__dense1(attn_output)
         attn_output = self.dropout3(attn_output, training=training)
         out1 = attn_output + x
+        # out1 = self.__alpha_1 * attn_output + x
         # out1 = self.dropout3(out1, training=training)
 
         # out1 = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, d_model)
@@ -170,6 +177,7 @@ class EncoderLayer(layers.Layer):
         ffn_output = self.ffn(out1, training=training)  # (batch_size, input_seq_len, d_model)
         ffn_output = self.dropout2(ffn_output, training=training)
         out2 = self.layernorm2(out1 + ffn_output)  # (batch_size, input_seq_len, d_model)
+        # out2 = self.__alpha_2 * ffn_output + out1
         # out2 = self.dropout4(out2, training=training)
 
         return out2
@@ -189,7 +197,14 @@ class DecoderLayer(layers.Layer):
 
         self.__dense1 = layers.Dense(input_dim if not use_embeddings else d_model)
         self.__dense2 = layers.Dense(input_dim if not use_embeddings else d_model)
-        self.__dense3 = layers.Dense(input_dim if not use_embeddings else d_model)
+        # self.__dense3 = layers.Dense(input_dim if not use_embeddings else d_model)
+
+        self.__alpha_1 = tf.Variable(tf.random.uniform((d_model,)),
+                                     trainable=True, name='alpha_1', dtype=tf.float32)
+        self.__alpha_2 = tf.Variable(tf.random.uniform((d_model,)),
+                                     trainable=True, name='alpha_2', dtype=tf.float32)
+        self.__alpha_3 = tf.Variable(tf.random.uniform((d_model,)),
+                                     trainable=True, name='alpha_3', dtype=tf.float32)
 
         self.layernorm1 = layers.LayerNormalization(epsilon=1e-6)
         self.layernorm2 = layers.LayerNormalization(epsilon=1e-6)
@@ -213,6 +228,7 @@ class DecoderLayer(layers.Layer):
         attn1 = self.__dense1(attn1)
         attn1 = self.dropout4(attn1, training=training)
         out1 = attn1 + x
+        # out1 = self.__alpha_1 * attn1 + x
         # out1 = self.dropout4(out1, training=training)
 
         # out1 = self.layernorm1(attn1 + x)
@@ -224,6 +240,7 @@ class DecoderLayer(layers.Layer):
         attn2 = self.__dense2(attn2)
         attn2 = self.dropout5(attn2, training=training)
         out2 = attn2 + x
+        # out2 = self.__alpha_2 * attn2 + x
         # out2 = self.dropout5(out2, training=training)
 
         # out2 = self.layernorm2(attn2 + out1)  # (batch_size, target_seq_len, d_model)
@@ -235,6 +252,7 @@ class DecoderLayer(layers.Layer):
         # out3 = ffn_output + out2
 
         out3 = self.layernorm3(ffn_output + out2)  # (batch_size, target_seq_len, d_model)
+        # out3 = self.__alpha_3 * ffn_output + out2
         # out3 = self.dropout6(out3, training=training)
 
         return out3, attn_weights_block1, attn_weights_block2
@@ -267,8 +285,12 @@ class Encoder(layers.Layer):
         # self.__dense = layers.Dense(d_model, activation='tanh')
         # self.__dropout_2 = layers.Dropout(drop_rate)
 
-        self.enc_layers = [EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate)
-                           for _ in range(num_layers)]
+        self.enc_layers = []
+        for i in range(num_layers):
+            with tf.name_scope(f'encoder_layer_{i}'):
+                self.enc_layers.append(EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate))
+        # self.enc_layers = [EncoderLayer(d_model, num_heads, d_ff, use_embeddings, input_vocab_size, drop_rate)
+        #                    for _ in range(num_layers)]
 
         self.dropout = layers.Dropout(drop_rate)
 
@@ -322,8 +344,12 @@ class Decoder(layers.Layer):
         # self.__dense = layers.Dense(d_model, activation='tanh')
         # self.__dropout_2 = layers.Dropout(drop_rate)
 
-        self.dec_layers = [DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate)
-                           for _ in range(num_layers)]
+        self.dec_layers = []
+        for i in range(num_layers):
+            with tf.name_scope(f'decoder_layer_{i}'):
+                self.dec_layers.append(DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate))
+        # self.dec_layers = [DecoderLayer(d_model, num_heads, d_ff, use_embeddings, target_vocab_size, drop_rate)
+        #                    for _ in range(num_layers)]
         self.dropout = layers.Dropout(drop_rate)
 
     def call(self, x, enc_output, end_pos, training, look_ahead_mask, padding_mask):
@@ -366,11 +392,13 @@ class Transformer(keras.Model):
                  share_embeddings=True):
         super(Transformer, self).__init__()
 
-        self.encoder = Encoder(num_layers, d_model, num_heads, d_ff,
-                               input_vocab_size, max_pe_input, drop_rate, use_embeddings)
+        with tf.name_scope('Encoder'):
+            self.encoder = Encoder(num_layers, d_model, num_heads, d_ff,
+                                   input_vocab_size, max_pe_input, drop_rate, use_embeddings)
 
-        self.decoder = Decoder(num_layers, d_model, num_heads, d_ff,
-                               target_vocab_size, max_pe_target, drop_rate, use_embeddings)
+        with tf.name_scope('Decoder'):
+            self.decoder = Decoder(num_layers, d_model, num_heads, d_ff,
+                                   target_vocab_size, max_pe_target, drop_rate, use_embeddings)
 
         self.final_layer = layers.Dense(target_vocab_size, activation='tanh')
 

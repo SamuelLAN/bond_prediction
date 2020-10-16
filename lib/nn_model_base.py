@@ -270,6 +270,8 @@ class NN:
                 for tmp_x, tmp_y in x:
                     if isinstance(tmp_x, tuple):
                         x = tuple([v[:1] for v in tmp_x])
+                        # x[-1] = np.squeeze(x[-1], axis=-1)
+                        # x = tuple(x)
                     else:
                         x = tmp_x[:1]
                     y = tmp_y[:1]
@@ -327,9 +329,12 @@ class NN:
             for step in range(steps):
                 if isinstance(x, list):
                     tmp_x = [v[step * batch_size: (step + 1) * batch_size] for v in x]
+                    tmp_x[-1] = np.expand_dims(tmp_x[-1], axis=-1)
                 else:
                     tmp_x = x[step * batch_size: (step + 1) * batch_size]
-                logits_list.append(self.predict(tmp_x))
+                logits, out1_list_enc, out1_list_dec, out2_list_dec = self.model(tmp_x, get_more=True)
+                logits_list.append(logits)
+                # logits_list.append(self.predict(tmp_x))
 
         logits_list = np.vstack(logits_list)
 

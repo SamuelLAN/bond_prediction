@@ -85,3 +85,7 @@ def get_relative_dir(*args, root=''):
         if not os.path.exists(dir_path) and '.' not in arg:
             os.mkdir(dir_path)
     return dir_path
+
+
+def get_relative_file(*args, root=''):
+    return os.path.join(get_relative_dir(*args[:-1], root=root), args[-1])

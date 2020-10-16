@@ -166,8 +166,8 @@ print('\nfinish reading\n\nsorting data ...')
 # with open(os.path.join(path.ROOT_DIR, 'runtime', 'stats_of_dealers.csv'), 'w') as f:
 #     f.write(string)
 
-print(f'finish writing\n\ncheck_balance_num: {check_balance_num}')
-exit()
+# print(f'finish writing\n\ncheck_balance_num: {check_balance_num}')
+# exit()
 
 def generate_chart_for_distinct_count_of_bonds(x_index, title, x_label, y_label,
                                                remove_last_num=None, img_name=None, x_ticks=None, y_ticks=None,
@@ -207,75 +207,75 @@ def generate_chart_for_distinct_count_of_bonds(x_index, title, x_label, y_label,
     print('finish plotting')
 
 
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'mean interval for transaction count',
-                                           'transaction count',
-                                           'mean interval',
-                                           3,
-                                           'plot_of_mean_interval_for_transaction_count.png',
-                                           np.arange(0, 450000, 50000),
-                                           np.arange(0, 220, 10),
-                                           -3)
-
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'mean interval for transaction count',
-                                           'transaction count',
-                                           'mean interval',
-                                           25,
-                                           'plot_of_mean_interval_for_transaction_count_zoom.png',
-                                           np.arange(0, 105000, 5000),
-                                           np.arange(0, 210, 10),
-                                           -3)
-
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'mean count_of_dates/interval for transaction count',
-                                           'transaction count',
-                                           'mean count_of_dates/interval',
-                                           3,
-                                           'plot_of_mean_count_of_dates_divide_interval_for_transaction_count.png',
-                                           np.arange(0, 450000, 50000),
-                                           np.arange(0, 0.36, 0.02),
-                                           -2)
-
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'mean count_of_dates/interval for transaction count',
-                                           'transaction count',
-                                           'mean count_of_dates/interval',
-                                           25,
-                                           'plot_of_mean_count_of_dates_divide_interval_for_transaction_count_zoom.png',
-                                           np.arange(0, 105000, 5000),
-                                           np.arange(0, 0.36, 0.02),
-                                           -2)
-
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'mean count_of_dates for transaction count',
-                                           'transaction count',
-                                           'mean count of dates that have transactions',
-                                           3,
-                                           'plot_of_mean_count_of_dates_that_have_transaction_for_transaction_count.png',
-                                           np.arange(0, 450000, 50000),
-                                           np.arange(0, 34, 2),
-                                           -1)
-
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'mean count_of_dates for transaction count',
-                                           'transaction count',
-                                           'mean count of dates that have transactions',
-                                           25,
-                                           'plot_of_mean_count_of_dates_that_have_transaction_for_transaction_count_zoom.png',
-                                           np.arange(0, 105000, 5000),
-                                           np.arange(0, 23, 1),
-                                           -1)
-
-generate_chart_for_distinct_count_of_bonds(9,
-                                           'distinct count of bonds for fraction of dealers',
-                                           'fraction of dealers',
-                                           'distinct count of bonds',
-                                           None,
-                                           'plot_of_distinct_c_of_bonds_for_fraction_dealers.png',
-                                           np.arange(0, 1.05, 0.05),
-                                           np.arange(0, 11000, 1000))
-
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'mean interval for transaction count',
+#                                            'transaction count',
+#                                            'mean interval',
+#                                            3,
+#                                            'plot_of_mean_interval_for_transaction_count.png',
+#                                            np.arange(0, 450000, 50000),
+#                                            np.arange(0, 220, 10),
+#                                            -3)
+#
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'mean interval for transaction count',
+#                                            'transaction count',
+#                                            'mean interval',
+#                                            25,
+#                                            'plot_of_mean_interval_for_transaction_count_zoom.png',
+#                                            np.arange(0, 105000, 5000),
+#                                            np.arange(0, 210, 10),
+#                                            -3)
+#
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'mean count_of_dates/interval for transaction count',
+#                                            'transaction count',
+#                                            'mean count_of_dates/interval',
+#                                            3,
+#                                            'plot_of_mean_count_of_dates_divide_interval_for_transaction_count.png',
+#                                            np.arange(0, 450000, 50000),
+#                                            np.arange(0, 0.36, 0.02),
+#                                            -2)
+#
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'mean count_of_dates/interval for transaction count',
+#                                            'transaction count',
+#                                            'mean count_of_dates/interval',
+#                                            25,
+#                                            'plot_of_mean_count_of_dates_divide_interval_for_transaction_count_zoom.png',
+#                                            np.arange(0, 105000, 5000),
+#                                            np.arange(0, 0.36, 0.02),
+#                                            -2)
+#
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'mean count_of_dates for transaction count',
+#                                            'transaction count',
+#                                            'mean count of dates that have transactions',
+#                                            3,
+#                                            'plot_of_mean_count_of_dates_that_have_transaction_for_transaction_count.png',
+#                                            np.arange(0, 450000, 50000),
+#                                            np.arange(0, 34, 2),
+#                                            -1)
+#
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'mean count_of_dates for transaction count',
+#                                            'transaction count',
+#                                            'mean count of dates that have transactions',
+#                                            25,
+#                                            'plot_of_mean_count_of_dates_that_have_transaction_for_transaction_count_zoom.png',
+#                                            np.arange(0, 105000, 5000),
+#                                            np.arange(0, 23, 1),
+#                                            -1)
+#
+# generate_chart_for_distinct_count_of_bonds(9,
+#                                            'distinct count of bonds for fraction of dealers',
+#                                            'fraction of dealers',
+#                                            'distinct count of bonds',
+#                                            None,
+#                                            'plot_of_distinct_c_of_bonds_for_fraction_dealers.png',
+#                                            np.arange(0, 1.05, 0.05),
+#                                            np.arange(0, 11000, 1000))
+#
 generate_chart_for_distinct_count_of_bonds(1,
                                            'distinct count of bonds for transaction count',
                                            'transaction count',
@@ -284,15 +284,15 @@ generate_chart_for_distinct_count_of_bonds(1,
                                            'plot_of_distinct_c_of_bonds_for_transaction_count.png',
                                            np.arange(0, 450000, 50000),
                                            np.arange(0, 11000, 1000))
-
-generate_chart_for_distinct_count_of_bonds(1,
-                                           'distinct count of bonds for transaction count',
-                                           'transaction count',
-                                           'distinct count of bonds',
-                                           25,
-                                           'plot_of_distinct_c_of_bonds_for_transaction_count_zoom.png',
-                                           np.arange(0, 105000, 5000),
-                                           np.arange(0, 6300, 300))
+#
+# generate_chart_for_distinct_count_of_bonds(1,
+#                                            'distinct count of bonds for transaction count',
+#                                            'transaction count',
+#                                            'distinct count of bonds',
+#                                            25,
+#                                            'plot_of_distinct_c_of_bonds_for_transaction_count_zoom.png',
+#                                            np.arange(0, 105000, 5000),
+#                                            np.arange(0, 6300, 300))
 
 
 def generate_hist_for_distinct_count_of_bonds(_tmp_data, bins, title, img_name=None, x_ticks=None, y_ticks=None):

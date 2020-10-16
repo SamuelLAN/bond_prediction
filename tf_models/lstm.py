@@ -10,16 +10,21 @@ layers = keras.layers
 class LSTM(keras.Model):
 
     def __init__(self, input_dim, emb_dim, num_class, hidden_units=500, dropout_rate=0.0, activation='tanh',
-                 name='lstm'):
+                 use_embeddings=True, name='lstm'):
         super(LSTM, self).__init__(name=name)
-        self.__ranges = np.expand_dims(np.arange(input_dim), axis=0)
-        self.__emb = layers.Embedding(input_dim, emb_dim)
-        # self.__dropout_1 = layers.Dropout(dropout_rate)
 
+        self.__use_embeddings = use_embeddings
+        if self.__use_embeddings:
+            self.__ranges = np.expand_dims(np.arange(input_dim), axis=0)
+            self.__emb = layers.Embedding(input_dim, emb_dim)
+
+        self.__dropout_1 = layers.Dropout(dropout_rate)
         self.__lstm_1 = layers.LSTM(hidden_units, return_sequences=True, return_state=True, dropout=dropout_rate)
         self.__lstm_2 = layers.LSTM(hidden_units, dropout=dropout_rate)
+        self.__dropout_3 = layers.Dropout(dropout_rate)
+
         self.__fc_3 = layers.Dense(hidden_units, activation=activation)
-        self.__dropout_2 = layers.Dropout(dropout_rate)
+        self.__dropout_4 = layers.Dropout(dropout_rate)
         self.__fc_4 = layers.Dense(num_class, activation=activation)
 
     def __get_emb(self, x_mask):
@@ -29,13 +34,17 @@ class LSTM(keras.Model):
         return embeddings
 
     def call(self, inputs, training=None, mask=None):
-        embeddings = self.__get_emb(inputs)
-        # embeddings = self.__dropout_1(embeddings, training=training)
+        if self.__use_embeddings:
+            embeddings = self.__get_emb(inputs)
+        else:
+            embeddings = tf.cast(inputs, tf.float64)
+        embeddings = self.__dropout_1(embeddings, training=training)
 
         x, final_memory_state, final_carry_state = self.__lstm_1(embeddings, training=training)
         x = self.__lstm_2(x, training=training)
+        x = self.__dropout_3(x, training=training)
         x = self.__fc_3(x)
-        x = self.__dropout_2(x, training=training)
+        x = self.__dropout_4(x, training=training)
         x = self.__fc_4(x)
 
         return x

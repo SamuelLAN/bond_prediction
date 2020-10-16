@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tf_models.transformer import positional_encoding
 
 # tf.enable_eager_execution()
 import numpy as np
@@ -20,6 +21,9 @@ class FC(keras.Model):
             self.__ranges = np.expand_dims(np.arange(input_dim), axis=0)
             self.__emb = layers.Embedding(input_dim, emb_dim)
 
+            self.d_model = emb_dim
+            self.pos_encoding = positional_encoding(20, emb_dim)
+
         len_layers = len(unit_list)
 
         # initialize dropout layers
@@ -40,6 +44,11 @@ class FC(keras.Model):
             embeddings = tf.cast(embeddings, tf.float64)
         else:
             embeddings = self.__get_emb(inputs)
+
+            seq_len = tf.shape(inputs)[1]
+            embeddings *= tf.math.sqrt(tf.cast(self.d_model, tf.float32))
+            x_mask = tf.expand_dims(tf.cast(tf.math.greater(tf.reduce_sum(inputs, axis=-1), 0), tf.float32), axis=-1)
+            embeddings += self.pos_encoding[:, :seq_len, :] * x_mask
 
         if self.__mode == 'sum':
             # sum embeddings by their time steps
