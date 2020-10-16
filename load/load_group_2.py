@@ -11,10 +11,17 @@ import threading
 class Loader:
     random_state = 42
 
-    def __init__(self, dir_path, buffer_size=8000, prefix='train'):
+    def __init__(self, dir_path, buffer_size=8000, prefix='train', mask_freq=[]):
         assert os.path.exists(dir_path)
         self.__dir_path = dir_path
         self.__prefix = prefix
+
+        self.__mask = None
+        if mask_freq:
+            _path_mask = utils.get_relative_dir('runtime', 'cache', f'group_{mask_freq[0]}_mask.pkl')
+            masks = utils.load_pkl(_path_mask)
+            _mask = masks[mask_freq[1]]
+            self.__mask = np.expand_dims(_mask, axis=0)
 
         # get all file paths
         file_list = list(filter(lambda file_name: file_name[:len(prefix)] == prefix, os.listdir(dir_path)))
@@ -54,6 +61,8 @@ class Loader:
                 self.__cur_index = (self.__cur_index + 1) % self.__len_files
 
                 X_mask, Y = utils.load_pkl(file_path)
+                if not isinstance(self.__mask, type(None)):
+                    Y = np.array(Y) * self.__mask
                 data = list(zip(X_mask, Y))
 
                 random.seed(42)
@@ -118,6 +127,10 @@ class Loader:
                 print('\rprogress: %.2f%% ' % progress, end='')
 
             X_mask, Y = utils.load_pkl(file_path)
+
+            if not isinstance(self.__mask, type(None)):
+                Y = np.array(Y) * self.__mask
+
             self.__X = np.vstack([self.__X, X_mask]) if len(self.__X) else X_mask
             self.__y = np.vstack([self.__y, Y]) if len(self.__y) else Y
 
@@ -147,6 +160,10 @@ class Loader:
         Y = np.array([])
         for i, file_path in enumerate(file_list):
             x_mask, y = utils.load_pkl(file_path)
+
+            if not isinstance(self.__mask, type(None)):
+                y = np.array(y) * self.__mask
+
             X = np.vstack([X, x_mask]) if len(X) else np.array(x_mask)
             Y = np.vstack([Y, y]) if len(Y) else np.array(y)
         return np.array(X, dtype=np.int32), np.array(Y, dtype=np.int32)
@@ -211,8 +228,9 @@ class Loader:
         print(f'voc_size: {self.input_dim()}')
         print('----------------------------\n')
 
-# group_name = 'group_all_no_below_50_25_10_g_minus_1_1_train'
-# group_path = r'D:\Data\share_mine_laptop\community_detection\data\inputs\group_Spectral_Clustering_filter_lower_5_with_model_input_features\no_day_off_no_distinguish_buy_sell_use_transaction_count'
+
+# group_name = 'all'
+# group_path = r'D:\Data\share_mine_laptop\community_detection\data\input_data\group_k_means_split_by_date\no_day_off_no_distinguish_buy_sell_use_transaction_count'
 # group_path = os.path.join(group_path, group_name)
 #
 # o_data = Loader(group_path)
@@ -226,19 +244,27 @@ class Loader:
 # g = o_data.generator(bsize)
 # for tmp in g:
 #     tmp_x, tmp_y = tmp
-#     x = tmp_x[0]
+#     # x = tmp_x[0]
 #     print('\n-------------------------')
-#     print(x.shape)
-#     print(tmp_y.shape)
+#     for v in tmp_x:
+#         print(np.array(v).shape)
+#     print(np.array(tmp_y).shape)
+#     # print(tmp_y.shape)
 #
-#     if x.shape[0] != tmp_y.shape[0]:
-#         print('##################################')
+#     if not np.array(tmp_x[-1]).any():
+#         print('end')
+#         exit()
+#
+# #     # if x.shape[0] != tmp_y.shape[0]:
+# #     #     print('##################################')
 #
 #     step += 1
-#     if step >= steps:
+#     if step > steps:
 #         break
 #
 # # X, y = o_data.all()
 #
-# print(X.shape)
-# print(y.shape)
+# o_data.stop()
+#
+# # print(X.shape)
+# # print(y.shape)
