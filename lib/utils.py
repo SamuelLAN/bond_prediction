@@ -1,7 +1,11 @@
+import os
 import time
 import json
 import chardet
 from six.moves import cPickle as pickle
+
+__cur_dir = os.path.split(os.path.abspath(__file__))[0]
+root_dir = os.path.split(__cur_dir)[0]
 
 
 def date_2_timestamp(_date, close_night=False):
@@ -64,10 +68,20 @@ def decode_2_utf8(string):
         return string
 
 
-def output_and_log(file_path, output):
+def output_and_log(file_path, output, headline=''):
     """ Display the output to the console and save it to the log file. """
     # show to the console
     print(output)
     # save to the log file
+    content = headline + output if not os.path.exists(file_path) else output
     with open(file_path, 'ab') as f:
-        f.write(str(output + '\n').encode('utf-8'))
+        f.write(str(content + '\n').encode('utf-8'))
+
+
+def get_relative_dir(*args, root=''):
+    dir_path = root_dir if not root else root
+    for arg in args:
+        dir_path = os.path.join(dir_path, arg)
+        if not os.path.exists(dir_path) and '.' not in arg:
+            os.mkdir(dir_path)
+    return dir_path

@@ -119,26 +119,27 @@ def __generate_date_structure(len_bonds, start_date='2015-01-02', end_date='2015
 
 def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_steps_list,
                with_day_off=True, buy_sell_plan=2, use_volume=False,
-               save_path='', split_ratio=0.9, is_train=True, get_all=False):
+               save_path='', split_ratio=0.9, is_train=True):
     d_dealer_index_2_group_label = utils.load_json(group_file_path)
     # d_dealer_index_2_trace_list = utils.load_pkl(os.path.join(path.ROOT_DIR, 'runtime', 'tmp_d_dealers.pkl'))
 
     d_dealer_for_gen_input = utils.load_pkl(
         os.path.join(path.ROOT_DIR, 'runtime', 'd_dealer_for_gen_input_with_no_below_50_25_10.pkl'))
 
-    if not get_all:
+    _individual_index = ''
+    if isinstance(group_index, int):
         tmp_list = [dealer_index for dealer_index, group_label in d_dealer_index_2_group_label.items()
                     if group_label == group_index]
         print(f'len_group_member: {len(tmp_list)}')
     else:
-        print(f'len_group_member: {len(d_dealer_index_2_group_label)}')
+        print(f'len_group_member: 1')
+        _individual_index = group_index[1:]
 
     # get total trace list
     train_trace_list = []
     test_trace_list = []
     for dealer_index, val in d_dealer_for_gen_input.items():
-        if dealer_index not in d_dealer_index_2_group_label or \
-                (not get_all and d_dealer_index_2_group_label[dealer_index] != group_index):
+        if dealer_index not in d_dealer_index_2_group_label or _individual_index != dealer_index:
             continue
         trace_list = val['trace_list']
         trace_list.sort(key=lambda x: x[-1])
@@ -163,8 +164,7 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
     Y = []
 
     for dealer_index, val in d_dealer_for_gen_input.items():
-        if dealer_index not in d_dealer_index_2_group_label or \
-                (not get_all and d_dealer_index_2_group_label[dealer_index] != group_index):
+        if dealer_index not in d_dealer_index_2_group_label or _individual_index != dealer_index:
             continue
 
         # filter bonds that only appear in test set
@@ -255,11 +255,11 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
 
 group_name = 'group_Spectral_Clustering_filter_lower_5_with_model_input_features.json'
 param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
-group_index = 3
+group_index = 4
 is_train = True
-get_all = True
-if get_all:
-    group_index = 'all'
+individual_index = '3260'
+if individual_index:
+    group_index = f'i{individual_index}'
 
 group_file_path = os.path.join(path.ROOT_DIR, 'group', group_name)
 dataset_suffix = 'train' if is_train else 'test'
@@ -276,4 +276,4 @@ if not os.path.exists(save_dir_path):
 save_file_path = os.path.join(save_dir_path, 'data')
 
 gen_inputs(group_file_path, group_index, [5, 10, 15], [2], False, 0, False,
-           save_path=save_file_path, is_train=is_train, get_all=get_all)
+           save_path=save_file_path, is_train=is_train)

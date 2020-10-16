@@ -1,6 +1,6 @@
 import tensorflow as tf
 from lib.nn_model_base import NN
-from tf_models.lstm import LSTM
+from tf_models.fc import FC
 from tf_metrics.multi_label_classification import tf_accuracy, tf_precision, tf_recall, tf_f1, tf_hamming_loss
 
 
@@ -13,19 +13,17 @@ class Model(NN):
         **NN.default_params,
         'learning_rate': 1e-3,
         'emb_dim': 128,
-        'hidden_units': 128,
-        # 'lr_decay_rate': 0.01,
-        # 'lr_staircase': False,
-        # 'lr_factor': 0.6,
-        # 'lr_patience': 10,
+        'unit_list': [128, 128],
+        'mode': 'concat',
+        'use_embeddings': False,
         'batch_size': 64,
         'epoch': 3000,
-        'early_stop': 50,
+        'early_stop': 30,
         'monitor': 'val_tf_f1',
         'monitor_mode': 'max',
         'monitor_start_train': 'tf_accuracy',
         'monitor_start_train_val': 0.70,
-        'dropout': 0.0,
+        'dropout': 0.1,
         # 'kernel_initializer': 'glorot_uniform',
         # 'loss': 'categorical_crossentropy',
         'loss': 'mean_squared_error',
@@ -70,11 +68,12 @@ class Model(NN):
 
     def build(self):
         """ Build neural network architecture """
-        self.model = LSTM(
+        self.model = FC(
             input_dim=self.__input_dim,
             emb_dim=self.params['emb_dim'],
-            num_class=self.__num_classes,
-            hidden_units=self.params['hidden_units'],
+            unit_list=self.params['unit_list'] + [self.__num_classes],
             dropout_rate=self.params['dropout'],
             activation='tanh',
+            mode=self.params['mode'],
+            use_embeddings=self.params['use_embeddings'],
         )
