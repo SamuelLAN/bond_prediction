@@ -23,7 +23,7 @@ import os
 
 warnings.filterwarnings('ignore')
 
-from models.transformer import Model
+from models.transformer_modified_zero import Model
 from lib.utils import output_and_log
 from config import path
 from config.load import LOG, group_path

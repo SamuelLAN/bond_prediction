@@ -32,7 +32,7 @@ from models.transformer_modified_zero import Model
 # from models.transformer_rezero import Model
 from lib.utils import output_and_log
 from config import path
-from config.load import LOG, group_path, group_file_name, freq_level
+from config.load import LOG, group_path_dealer_prediction, group_file_name, freq_level
 from config.param import TIME_DIR, measure_dict
 from load.load_group_2 import Loader
 
@@ -56,10 +56,10 @@ class Train:
 
         # initialize data instances
         # print(group_path)
-        self.__train_load = Loader(group_path, buffer_size=20000, prefix='train',
+        self.__train_load = Loader(group_path_dealer_prediction, buffer_size=20000, prefix='train',
                                    # mask_freq=[group_index, freq_level]
                                    )
-        self.__test_load = Loader(group_path, prefix='test',
+        self.__test_load = Loader(group_path_dealer_prediction, prefix='test',
                                   # mask_freq=[group_index, freq_level]
                                   )
 
@@ -201,10 +201,10 @@ class Train:
                  'eval_test_use_time: %ss\n' \
                  'data_param: %s\n' \
                  'time: %s\n' \
-                 'dealer_results:\n%s\n\n' % data
+                 'bond_results:\n%s\n\n' % data
 
         # show and then save result to log file
-        output_and_log(path.PATH_MODEL_LOG, output)
+        output_and_log(path.PATH_MODEL_LOG_DEALER, output)
 
         model_name = path.MODEL_NAME
         data_statistics = ','.join(list(map(
@@ -235,10 +235,10 @@ class Train:
         for k, v in test_result_dict.items():
             csv_string += f',{round(v, 4)}'
 
-        output_and_log(path.PATH_CSV_LOG, csv_string, csv_headline)
+        output_and_log(path.PATH_CSV_LOG_DEALER, csv_string, csv_headline)
 
 
-o_train = Train(use_generator=False)
+o_train = Train(use_generator=True)
 o_train.run()
 
 # 2020_04_04_23_04_33

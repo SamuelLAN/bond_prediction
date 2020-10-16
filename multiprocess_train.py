@@ -21,8 +21,8 @@ if __name__ == '__main__':
     len_dir = len(dir_list)
 
     for i, dealer_index in enumerate(dir_list):
-        if dealer_index < 'i1302':
-            continue
+        # if dealer_index < 'i1302':
+        #     continue
 
         print('Parent process %s.' % os.getpid())
         p = Process(target=train, args=(dealer_index,))
