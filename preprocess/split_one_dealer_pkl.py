@@ -2,8 +2,8 @@ import os
 from lib import utils
 import random
 
-dir_path = r'D:\Data\share_mine_laptop\community_detection\data\input_data\group_spectral_clustering_with_patterns_info_cluster_6_split_by_date\no_day_off_no_distinguish_buy_sell_use_transaction_count\group_5'
-new_dir_path = r'D:\Data\share_mine_laptop\community_detection\data\input_data\group_spectral_clustering_with_patterns_info_cluster_6_split_by_date\no_day_off_no_distinguish_buy_sell_use_transaction_count\group_5_v1'
+dir_path = r'D:\Data\share_mine_laptop\community_detection\data\input_data_dealer_prediction\group_k_means_cluster_4_feat_1_trace_count_2_volume_3_num_dealer_split_by_date\no_day_off_no_distinguish_buy_sell_use_transaction_count\group_3'
+new_dir_path = r'D:\Data\share_mine_laptop\community_detection\data\input_data_dealer_prediction\group_k_means_cluster_4_feat_1_trace_count_2_volume_3_num_dealer_split_by_date\no_day_off_no_distinguish_buy_sell_use_transaction_count\group_3_v1'
 batch_size = 12
 
 if not os.path.exists(new_dir_path):

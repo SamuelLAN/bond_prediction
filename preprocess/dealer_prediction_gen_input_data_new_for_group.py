@@ -141,11 +141,12 @@ def __generate_date_structure(len_bonds, start_date='2015-01-02', end_date='2015
 
 
 def get_x_y_for_one_dealer(traces, dictionary, _input_windows, _output_windows, pre_traces=None,
-                           _with_day_off=False, _buy_sell_plan=0, _use_volume=False, only_buy_y=False, only_sell_y=False):
+                           _with_day_off=False, _buy_sell_plan=0, _use_volume=False, only_buy_y=False,
+                           only_sell_y=False):
     # get useful variables
-    start_date = traces[0][-1]
-    end_date = traces[-1][-1]
-    len_bonds = len(dictionary)
+    start_date = traces[0]['date']
+    end_date = traces[-1]['date']
+    len_dealers = len(dictionary)
     max_input_time_step = max(_input_windows)
     sample_start_index = 0
 
@@ -162,11 +163,11 @@ def get_x_y_for_one_dealer(traces, dictionary, _input_windows, _output_windows, 
             weekday_num -= 1
 
         start_date = utils.timestamp_2_date(start_timestamp)
-        pre_traces = list(filter(lambda x: x[-1] >= start_date, pre_traces))
+        pre_traces = list(filter(lambda x: x['date'] >= start_date, pre_traces))
         traces += pre_traces
 
     # Format the data in date matrix
-    _, date_mask, dict_date_2_input_m_index = __generate_date_structure(len_bonds, start_date, end_date,
+    _, date_mask, dict_date_2_input_m_index = __generate_date_structure(len_dealers, start_date, end_date,
                                                                         _with_day_off, _buy_sell_plan)
 
     date_mask_for_y = copy.deepcopy(date_mask)
@@ -174,25 +175,26 @@ def get_x_y_for_one_dealer(traces, dictionary, _input_windows, _output_windows, 
     # according to the transaction history, fill the data into date structure
     for i, trace in enumerate(traces):
         # check if it is in holidays
-        _date = trace[-1]
+        _date = trace['date']
         if _date not in dict_date_2_input_m_index:
             continue
 
         # get values
-        bond_id = trace[0]
-        volume = trace[1]
-        trace_type = trace[2]
-        bond_index = dictionary.doc2idx([bond_id])[0]
+        dealer_id = trace['dealer_id']
+        volume = trace['volume']
+        trace_type = trace['type']
+        dealer_index = dictionary.doc2idx([dealer_id])[0]
 
         # check if use volume for the value of input elements
         value = 1 if not _use_volume else np.log10(volume)
 
         # change the date_mask on the day the transaction happened
         date_mask = __change_mask(
-            _buy_sell_plan, date_mask, bond_index, len_bonds, dict_date_2_input_m_index, _date, trace_type, value)
+            _buy_sell_plan, date_mask, dealer_index, len_dealers, dict_date_2_input_m_index, _date, trace_type, value)
 
         date_mask_for_y = __change_mask(
-            _buy_sell_plan, date_mask_for_y, bond_index, len_bonds, dict_date_2_input_m_index, _date, trace_type, value,
+            _buy_sell_plan, date_mask_for_y, dealer_index, len_dealers, dict_date_2_input_m_index, _date, trace_type,
+            value,
             only_buy=only_buy_y, only_sell=only_sell_y)
 
     X = []
@@ -236,93 +238,127 @@ def get_x_y_for_one_dealer(traces, dictionary, _input_windows, _output_windows, 
     return X, y
 
 
-def load_d_dealers_after_filtering(_trace_suffix, use_cache=True):
+def load_d_bonds_after_filtering(_trace_suffix, use_cache=True):
     print('\nloading d_dealers_2_traces ... ')
 
-    cache_path = utils.get_relative_dir('runtime', 'cache', 'filtered_d_dealers.pkl')
-    if os.path.exists(cache_path) and use_cache:
-        return utils.load_pkl(cache_path)
+    # cache_path = utils.get_relative_dir('runtime', 'cache', 'filtered_d_bonds.pkl')
+    # if os.path.exists(cache_path) and use_cache:
+    #     return utils.load_pkl(cache_path)
 
     # load trace data
-    train_d_dealers = utils.load_json(os.path.join(path.D_DEALERS_TRACE_DIR, f'train_{_trace_suffix}'))
-    test_d_dealers = utils.load_json(os.path.join(path.D_DEALERS_TRACE_DIR, f'test_{_trace_suffix}'))
+    train_d_bonds = utils.load_json(os.path.join(path.D_BONDS_TRACE_DIR, f'train_{_trace_suffix}'))
+    test_d_bonds = utils.load_json(os.path.join(path.D_BONDS_TRACE_DIR, f'test_{_trace_suffix}'))
 
-    # remove clients, we do not predict clients' behaviors
-    if '0' in train_d_dealers:
-        del train_d_dealers['0']
-    if '99999' in train_d_dealers:
-        del train_d_dealers['99999']
-    if '0' in test_d_dealers:
-        del test_d_dealers['0']
-    if '99999' in test_d_dealers:
-        del test_d_dealers['99999']
+    return train_d_bonds, test_d_bonds
 
-    new_train_d_dealers = {}
-    new_test_d_dealers = {}
+    new_train_d_bonds = {}
+    new_test_d_bonds = {}
 
-    length = len(train_d_dealers)
+    length = len(train_d_bonds)
     count = 0
 
-    for _dealer_index, train_traces in train_d_dealers.items():
+    for _bond_id, train_traces in train_d_bonds.items():
         # output progress
         count += 1
         if count % 2 == 0:
             progress = float(count) / length * 100.
             print('\rprogress: %.2f%% ' % progress, end='')
 
-        test_traces = test_d_dealers[_dealer_index]
+        test_traces = test_d_bonds[_bond_id]
 
         # calculate the total transaction count
         train_trace_count = len(train_traces)
 
-        # filter bonds whose trade frequency is low
-        if train_trace_count < 1000:
-            continue
-
-        # set filter boundaries according to the level of transaction count
-        if train_trace_count > 100000:
-            no_below = 45
-        elif train_trace_count > 10000:
-            no_below = 22
-        else:
-            no_below = 8
+        # TODO: setup the filtering
+        # # set filter boundaries according to the level of transaction count
+        # if train_trace_count > 100000:
+        #     no_below = 45
+        # elif train_trace_count > 10000:
+        #     no_below = 22
+        # else:
+        #     no_below = 8
 
         # arrange the bonds according to their dates of transaction, for filtering purpose
-        d_train_date_2_bonds = {}
+        d_train_date_2_dealers = {}
         for v in train_traces:
-            bond_id = v[0]
-            trade_date = v[-1]
+            trade_date = v['date']
+            report_dealer_id = v['report_dealer_index']
+            contra_dealer_id = v['contra_party_index']
 
-            if trade_date not in d_train_date_2_bonds:
-                d_train_date_2_bonds[trade_date] = []
-            d_train_date_2_bonds[trade_date].append(bond_id)
+            if trade_date not in d_train_date_2_dealers:
+                d_train_date_2_dealers[trade_date] = []
+
+            d_train_date_2_dealers[trade_date].append(report_dealer_id)
+            d_train_date_2_dealers[trade_date].append(contra_dealer_id)
 
         # construct doc list for transactions
-        train_doc_list = list(map(lambda x: x[1], d_train_date_2_bonds.items()))
+        train_doc_list = list(map(lambda x: x[1], d_train_date_2_dealers.items()))
 
         # construct dictionary for bonds
         train_dictionary = corpora.Dictionary(train_doc_list)
+
+        # TODO: check the no_below value
         # filter bonds whose trade freq is low
-        train_dictionary.filter_extremes(no_below=no_below, no_above=1., keep_n=2000)
+        # train_dictionary.filter_extremes(no_below=no_below, no_above=1., keep_n=2000)
+
         # num of bonds after filtering
         no_below_num_bonds = len(train_dictionary)
 
-        if no_below_num_bonds <= 5:
-            continue
+        # TODO: check filtering value
+        # if no_below_num_bonds <= 5:
+        #     continue
 
         # filter all traces whose bonds are not in the dictionary
-        train_traces = list(filter(lambda x: train_dictionary.doc2idx([x[0]])[0] != -1, train_traces))
-        test_traces = list(filter(lambda x: train_dictionary.doc2idx([x[0]])[0] != -1, test_traces))
+        train_traces = list(filter(lambda x:
+                                   train_dictionary.doc2idx([x['report_dealer_index']])[0] != -1 or
+                                   train_dictionary.doc2idx([x['contra_party_index']])[0] != -1,
+                                   train_traces))
+        test_traces = list(filter(lambda x:
+                                  train_dictionary.doc2idx([x['report_dealer_index']])[0] != -1 or
+                                  train_dictionary.doc2idx([x['contra_party_index']])[0] != -1,
+                                  test_traces))
 
         # filter this dealer if the transaction count of its filtered traces is small
         if len(train_traces) < 100 or len(test_traces) < 20:
             continue
 
-        new_train_d_dealers[_dealer_index] = train_traces
-        new_test_d_dealers[_dealer_index] = test_traces
+        new_train_d_bonds[_bond_id] = train_traces
+        new_test_d_bonds[_bond_id] = test_traces
 
-    utils.write_pkl(cache_path, (new_train_d_dealers, new_test_d_dealers))
-    return new_train_d_dealers, new_test_d_dealers
+    utils.write_pkl(cache_path, (new_train_d_bonds, new_test_d_bonds))
+    return new_train_d_bonds, new_test_d_bonds
+
+
+def convert_trace_list(trace_list, dictionary=None):
+    new_trace_list = []
+    has_dictionary = True if not isinstance(dictionary, type(None)) else False
+
+    for val in trace_list:
+        report_dealer_id = str(val['report_dealer_index'])
+        contra_dealer_id = str(val['contra_party_index'])
+
+        if report_dealer_id not in ['0', '99999'] and \
+                (not has_dictionary or dictionary.doc2idx([report_dealer_id])[0] != -1):
+            new_trace_list.append({
+                'dealer_id': report_dealer_id,
+                'volume': val['volume'],
+                'bond_id': val['bond_id'],
+                'date': val['date'],
+                'type': 'sell',
+            })
+
+        if contra_dealer_id not in ['0', '99999'] and \
+                (not has_dictionary or dictionary.doc2idx([val['contra_party_index']])[0] != -1):
+            new_trace_list.append({
+                'dealer_id': contra_dealer_id,
+                'volume': val['volume'],
+                'bond_id': val['bond_id'],
+                'date': val['date'],
+                'type': 'buy',
+            })
+
+    new_trace_list.sort(key=lambda x: x['date'])
+    return new_trace_list
 
 
 def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_list, output_time_steps_list,
@@ -332,44 +368,42 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
     """ generate input and ground truth data """
 
     # load group_dict
-    d_dealer_index_2_group_label = utils.load_json(_group_file_path)
+    d_bond_id_2_group_label = utils.load_json(_group_file_path)
 
-    # load d dealers and filter traces and bonds whose freq is low
-    train_d_dealers, test_d_dealers = load_d_dealers_after_filtering(_trace_suffix, use_cache=use_cache)
-
-    d_bond_id_2_freq_type_by_count = utils.load_json(utils.get_relative_dir(
-        'runtime', 'cache', 'd_bond_id_2_freq_type_by_count.json'))
-    d_bond_id_2_freq_type_by_volume = utils.load_json(utils.get_relative_dir(
-        'runtime', 'cache', 'd_bond_id_2_freq_type_by_volume.json'))
+    # TODO filtering
+    # # load d dealers and filter traces and bonds whose freq is low
+    train_d_bonds, test_d_bonds = load_d_bonds_after_filtering(_trace_suffix, use_cache=use_cache)
 
     # calculate the number of group members
     if not _get_all and not _get_individual:
-        tmp_list = [dealer_index for dealer_index, group_label in d_dealer_index_2_group_label.items()
-                    if group_label == _group_index]
-        print(f'len_group_member: {len(tmp_list)}')
+        tmp_list = [bond_id for bond_id, group_label in d_bond_id_2_group_label.items() if group_label == _group_index]
+        print(f'Group {group_index} bond count: {len(tmp_list)}')
     elif _get_individual:
-        print('len_group_member: 1')
+        print('Individual len_group_member: 1')
     else:
-        print(f'len_group_member: {len(d_dealer_index_2_group_label)}')
+        print(f'All len_group_member: {len(d_bond_id_2_group_label)}')
 
     # get total train trace list
     train_trace_list = []
-    for dealer_index, traces in train_d_dealers.items():
-        if dealer_index not in d_dealer_index_2_group_label or \
-                (not _get_all and d_dealer_index_2_group_label[dealer_index] != _group_index):
+    for bond_id, traces in train_d_bonds.items():
+        if bond_id not in d_bond_id_2_group_label or \
+                (not _get_all and d_bond_id_2_group_label[bond_id] != _group_index):
             continue
         train_trace_list += traces
 
-        # print(dealer_index, len(trace_list), trace_list)
+        # print(bond_id, len(trace_list), trace_list)
 
     # sort trace list so that bond traded first could be get smaller bond index (for visualization convenience)
-    train_trace_list.sort(key=lambda x: x[-1])
+    train_trace_list.sort(key=lambda x: x['date'])
 
     # get dictionary
-    train_doc_list = [list(map(lambda x: x[0], train_trace_list))]
-    dictionary = corpora.Dictionary(train_doc_list)
+
+    train_trace_list = convert_trace_list(train_trace_list)
+
+    # train_doc_list = list(map(lambda x: [x['report_dealer_index'], x['contra_party_index']], train_trace_list))
+    dictionary = corpora.Dictionary(list(map(lambda x: [x['dealer_id']], train_trace_list)))
     len_bonds = len(dictionary)
-    print(f'total bond num (group {_group_index}): {len_bonds}\n')
+    print(f'Group {_group_index} dealer count: {len_bonds}\n')
 
     # doc_of_most_freq_bonds = list(filter(lambda x: x[1] == 'most', d_bond_id_2_freq_type_by_count.items()))
     # doc_of_most_freq_bonds = list(map(lambda x: x[0], doc_of_most_freq_bonds))
@@ -434,27 +468,35 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
     dictionary_dict = {}
 
     # save data to a dict; key would be dealer index, value would be [X, y]
-    for dealer_index, train_traces in train_d_dealers.items():
-        if dealer_index not in d_dealer_index_2_group_label or \
-                (not _get_all and not _get_individual and d_dealer_index_2_group_label[dealer_index] != _group_index):
+    for bond_id, train_traces in train_d_bonds.items():
+        if bond_id not in d_bond_id_2_group_label or \
+                (not _get_all and not _get_individual and d_bond_id_2_group_label[bond_id] != _group_index):
             continue
 
         if _get_individual:
             train_doc_list = [list(map(lambda x: x[0], train_traces))]
             dictionary = corpora.Dictionary(train_doc_list)
             len_bonds = len(dictionary)
-            print(f'total bond num (dealer {dealer_index}): {len_bonds}\n')
+            print(f'total dealer num (bond {bond_id}): {len_bonds}\n')
 
             if return_dictionary:
-                dictionary_dict[dealer_index] = dictionary
+                dictionary_dict[bond_id] = dictionary
                 continue
 
-        test_traces = test_d_dealers[dealer_index]
+        test_traces = test_d_bonds[bond_id]
 
-        # filter bonds that only appear in test set
-        test_traces = list(filter(lambda x: dictionary.doc2idx([x[0]])[0] != -1, test_traces))
+        train_traces = convert_trace_list(train_traces, dictionary)
+        test_traces = convert_trace_list(test_traces, dictionary)
 
-        print(f'\ndealer: {dealer_index}, train_traces_num: {len(train_traces)}, test_traces_num: {len(test_traces)}')
+        # # filter bonds that only appear in test set
+        # test_traces = list(filter(
+        #     lambda x: dictionary.doc2idx([x['report_dealer_index']])[0] != -1 or
+        #               dictionary.doc2idx([x['contra_party_index']])[0] != -1, test_traces))
+
+        print(f'\nbond: {bond_id}, train_traces_num: {len(train_traces)}, test_traces_num: {len(test_traces)}')
+
+        if not train_traces or not test_traces:
+            continue
 
         # print('\n------------ filter bonds for a specific freq level ---------------')
         # tmp_train_traces = copy.deepcopy(train_traces)
@@ -498,29 +540,33 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
         # create dir for each dealer
         tmp_save_path = save_path
         if _get_individual:
-            tmp_save_path = os.path.join(os.path.split(save_path)[0], f'i{dealer_index}')
+            tmp_save_path = os.path.join(os.path.split(save_path)[0], f'i{bond_id}')
             if not os.path.exists(tmp_save_path):
                 os.mkdir(tmp_save_path)
 
-        utils.write_pkl(os.path.join(tmp_save_path, f'train_{dealer_index}.pkl'), [train_x, train_y])
-        utils.write_pkl(os.path.join(tmp_save_path, f'test_{dealer_index}.pkl'), [test_x, test_y])
+        utils.write_pkl(os.path.join(tmp_save_path, f'train_{bond_id}.pkl'), [train_x, train_y])
+        utils.write_pkl(os.path.join(tmp_save_path, f'test_{bond_id}.pkl'), [test_x, test_y])
 
     if return_dictionary and _get_individual:
         return dictionary_dict
 
 
-trace_suffix = 'd_dealers_2015_split_by_date_4_types.json'
-group_name = 'group_k_means_split_by_date.json'
-param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count_only_sell'
+cluster_num = 4
+group_type = f'k_means_cluster_{cluster_num}_feat_1_trace_count_2_volume_3_num_dealer_split_by_date'
+group_file_path = utils.get_relative_dir('groups_dealer_prediction', f'group_{group_type}.json')
+
+trace_suffix = 'd_bonds_2015_split_by_date.json'
+param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
 # param_name = 'no_day_off_distinguish_buy_sell_use_transaction_count'
-group_index = 3
+group_index = 2
 get_all = False
 get_individual = False
-filtering_use_cache = False
+filtering_use_cache = True
 only_buy_y = False
-only_sell_y = True
+only_sell_y = False
 
-input_windows = [5, 10, 15]
+# input_windows = [5, 10, 15]
+input_windows = [5]
 output_windows = [2]
 buy_sell_plan = 0
 with_day_off = False
@@ -529,11 +575,8 @@ use_volume = False
 if get_all:
     group_index = 'all'
 
-group_file_path = os.path.join(path.ROOT_DIR, 'groups', group_name)
-
 # generate save dir
-save_file_path = utils.get_relative_dir('input_data', group_name.split('.')[0], param_name,
-                                        # f'group_{group_index}_{freq_level}',
+save_file_path = utils.get_relative_dir('input_data_dealer_prediction', f'group_{group_type}', param_name,
                                         f'group_{group_index}',
                                         root=path.DATA_ROOT_DIR)
 

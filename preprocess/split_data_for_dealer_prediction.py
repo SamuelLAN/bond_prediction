@@ -10,7 +10,7 @@ __root_dir = os.path.split(__cur_dir)[0]
 split_by_date = True
 split_by_trace = False
 
-use_cache = False
+use_cache = True
 
 train_start_date = '2015-01-02'
 # val_start_date = '2015-10-22'
@@ -23,9 +23,9 @@ test_ratio = 0.1
 
 filter_new_bond_date = '2014-06-01'
 
-prefix = 'd_dealers_2015'
+prefix = 'd_bonds_2015'
 if split_by_date:
-    prefix += '_split_by_date_4_types'
+    prefix += '_split_by_date'
 elif split_by_trace:
     prefix += '_split_by_trace'
 
@@ -39,7 +39,7 @@ def load_data(_use_cache=True):
         }
     """
 
-    cache_path = utils.get_relative_dir('runtime', 'cache', 'dict_dealers_trace_2015.json')
+    cache_path = utils.get_relative_dir('runtime', 'cache', 'dict_bonds_trace_2015.json')
     if _use_cache and os.path.exists(cache_path):
         return utils.load_json(cache_path)
 
@@ -60,10 +60,10 @@ def load_data(_use_cache=True):
         'volume': float(x[3]),
     }, _data))
 
-    print('converting data to d_dealers ... ')
+    print('converting data to d_bonds ... ')
 
     # convert data to dict
-    _d_dealers = {}
+    _d_bonds = {}
 
     len_data = len(_data)
     for i, val in enumerate(_data):
@@ -84,83 +84,63 @@ def load_data(_use_cache=True):
         date_clean = val['date'].split(' ')[0]
         volume = val['volume']
 
-        # pass transaction data to d_dealers
-        if report_dealer_index == '0':
-            trade_type = 'BfC'
-
-            if contra_party_index not in _d_dealers:
-                _d_dealers[contra_party_index] = []
-            _d_dealers[contra_party_index].append([bond_id, volume, trade_type, date_clean])
-
-        else:
-            if contra_party_index == '99999':
-                trade_type = 'StC'
-
-                if report_dealer_index not in _d_dealers:
-                    _d_dealers[report_dealer_index] = []
-                _d_dealers[report_dealer_index].append([bond_id, volume, trade_type, date_clean])
-
-            else:
-                trade_type = 'StD'
-
-                if report_dealer_index not in _d_dealers:
-                    _d_dealers[report_dealer_index] = []
-                _d_dealers[report_dealer_index].append([bond_id, volume, trade_type, date_clean])
-
-                trade_type = 'BfD'
-
-                if contra_party_index != '0':
-                    if contra_party_index not in _d_dealers:
-                        _d_dealers[contra_party_index] = []
-                    _d_dealers[contra_party_index].append([bond_id, volume, trade_type, date_clean])
+        if bond_id not in _d_bonds:
+            _d_bonds[bond_id] = []
+        _d_bonds[bond_id].append({
+            'bond_id': bond_id,
+            'volume': volume,
+            'report_dealer_index': report_dealer_index,
+            'contra_party_index': contra_party_index,
+            'date': date_clean,
+        })
 
     print('sorting data ...')
 
     # sort transactions according to dates
-    for dealer_index, trace in _d_dealers.items():
-        trace.sort(key=lambda x: x[-1])
+    for bond_id, trace in _d_bonds.items():
+        trace.sort(key=lambda x: x['date'])
 
     print('finish all loading process\n')
 
     # cache data
-    utils.write_json(cache_path, _d_dealers)
-    return _d_dealers
+    utils.write_json(cache_path, _d_bonds)
+    return _d_bonds
 
 
 print('\nloading data ...\n')
 
-d_dealers = load_data(use_cache)
+d_bonds = load_data(use_cache)
 
-train_d_dealers = {}
-val_d_dealers = {}
-test_d_dealers = {}
+train_d_bonds = {}
+val_d_bonds = {}
+test_d_bonds = {}
 
 print('\nsplitting data ...')
 
 # split data according to the ratio of transactions
 if split_by_trace:
-    for dealer_index, traces in d_dealers.items():
+    for bond_id, traces in d_bonds.items():
         # calculate indices
         len_trace = len(traces)
         val_start_index = int(len_trace * train_ratio)
         test_start_index = int(len_trace * (train_ratio + val_ratio))
 
         # split data
-        train_d_dealers[dealer_index] = traces[:val_start_index]
-        val_d_dealers[dealer_index] = traces[val_start_index:test_start_index]
-        test_d_dealers[dealer_index] = traces[test_start_index:]
+        train_d_bonds[bond_id] = traces[:val_start_index]
+        val_d_bonds[bond_id] = traces[val_start_index:test_start_index]
+        test_d_bonds[bond_id] = traces[test_start_index:]
 
 # split data according to the date boundaries
 elif split_by_date:
-    for dealer_index, traces in d_dealers.items():
-        train_d_dealers[dealer_index] = list(filter(lambda x: x[-1] < val_start_date, traces))
-        val_d_dealers[dealer_index] = list(filter(lambda x: val_start_date <= x[-1] < test_start_date, traces))
-        test_d_dealers[dealer_index] = list(filter(lambda x: test_start_date <= x[-1], traces))
+    for bond_id, traces in d_bonds.items():
+        train_d_bonds[bond_id] = list(filter(lambda x: x['date'] < val_start_date, traces))
+        val_d_bonds[bond_id] = list(filter(lambda x: val_start_date <= x['date'] < test_start_date, traces))
+        test_d_bonds[bond_id] = list(filter(lambda x: test_start_date <= x['date'], traces))
 
 print('saving data ...')
 
-utils.write_json(os.path.join(path.D_DEALERS_TRACE_DIR, f'train_{prefix}.json'), train_d_dealers)
-utils.write_json(os.path.join(path.D_DEALERS_TRACE_DIR, f'val_{prefix}.json'), val_d_dealers)
-utils.write_json(os.path.join(path.D_DEALERS_TRACE_DIR, f'test_{prefix}.json'), test_d_dealers)
+utils.write_json(os.path.join(path.D_BONDS_TRACE_DIR, f'train_{prefix}.json'), train_d_bonds)
+utils.write_json(os.path.join(path.D_BONDS_TRACE_DIR, f'val_{prefix}.json'), val_d_bonds)
+utils.write_json(os.path.join(path.D_BONDS_TRACE_DIR, f'test_{prefix}.json'), test_d_bonds)
 
 print('done')
