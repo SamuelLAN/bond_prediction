@@ -195,7 +195,7 @@ if __name__ == '__main__':
     use_tsne_axis = False
 
     axis_name = 'x_trace_count_y_distinct_dealer_count_log_scale'
-    filtering_for_each_bond = 'no_filtering_axis'
+    filtering_for_each_bond = 'no_filtering_axis_first_4400_bonds'
     cache_result_name = f'tmp_group_{group_type}_{axis_name}_{filtering_for_each_bond}.pkl'
     # cache_result_name = 'tmp_graph_dealer_prediction.pkl'
 
@@ -212,11 +212,10 @@ if __name__ == '__main__':
     else:
         # generate features for each dealer
         origin_l_bonds = load_l_dealers(use_cache=False)
-        exit()
 
         print(f'\nnumber of bonds before filtering: {len(origin_l_bonds)}')
 
-        origin_l_bonds = origin_l_bonds[:1600]
+        origin_l_bonds = origin_l_bonds[:4400]
 
         print(f'\nnumber of bonds after filtering: {len(origin_l_bonds)}')
 

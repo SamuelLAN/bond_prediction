@@ -298,7 +298,7 @@ class Visual:
             plt.legend(fontsize=legend_size)
         if save_path:
             plt.savefig(save_path, dpi=400)
-        if show:
-            plt.show()
+        # if show:
+        #     plt.show()
         if close_pic:
             plt.close()
