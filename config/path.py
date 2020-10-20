@@ -3,7 +3,8 @@ from config.load import MODEL_NAME
 
 # ------------------------------------ data ------------------------------------------
 
-DATA_ROOT_DIR = r'D:\Data\share_mine_laptop\community_detection\data'
+# DATA_ROOT_DIR = r'D:\Data\share_mine_laptop\community_detection\data'
+DATA_ROOT_DIR = r'/fs/clip-scratch/yusenlin/data'
 
 # the directory that save the bond transaction data
 TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'pkl')
