@@ -290,23 +290,23 @@ if __name__ == '__main__':
                          d_bonds_2_group)
 
         # Dimension reduction so that it can be visualized
-        visual_points = ReduceDim.tsne(points, len(points), n_components=2)
+        # visual_points = ReduceDim.tsne(points, len(points), n_components=2)
         # visual_points = ReduceDim.pca(points, 2)
         # visual_points = np.array(list(map(lambda x: x[1:-2], origin_l_dealers)))[:, [0, 5]]
 
-        utils.write_pkl(utils.get_relative_file('runtime', 'cache',
-                                                f'tmp_group_{group_type}_x_trace_count_y_distinct_dealer_count_log_scale_no_filtering_axis.pkl'),
-                        [origin_l_bonds, l_bonds, visual_points, labels])
+        # utils.write_pkl(utils.get_relative_file('runtime', 'cache',
+        #                                         f'tmp_group_{group_type}_x_trace_count_y_distinct_dealer_count_log_scale_{filtering_for_each_bond}.pkl'),
+        #                 [origin_l_bonds, l_bonds, visual_points, labels])
 
-    if use_tsne_axis:
-        X, Y = list(zip(*visual_points))
-    else:
-        X = list(map(lambda a: a['trace_count'], origin_l_bonds))
-        Y = list(map(lambda a: a['dealer_count'], origin_l_bonds))
-
-    print('Plotting ...')
-
-    new_labels = list(map(lambda x: f'cluster {x}', labels))
+    # if use_tsne_axis:
+    #     X, Y = list(zip(*visual_points))
+    # else:
+    #     X = list(map(lambda a: a['trace_count'], origin_l_bonds))
+    #     Y = list(map(lambda a: a['dealer_count'], origin_l_bonds))
+    #
+    # print('Plotting ...')
+    #
+    # new_labels = list(map(lambda x: f'cluster {x}', labels))
 
     # new_labels = []
     # for i, v in enumerate(labels):
@@ -320,18 +320,20 @@ if __name__ == '__main__':
     #         activity = 'cluster 3'
     #     new_labels.append(activity)
 
-    Visual.spots(X, Y, new_labels, '',
-                 # spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_tsne_axis.png'),
-                 spot_size=3, save_path=utils.get_relative_dir('groups_dealer_prediction', file_name),
-                 dict_label_2_color={
-                     'cluster 0': 'green',
-                     'cluster 1': 'red',
-                     'cluster 2': 'blue',
-                     'cluster 3': 'black',
-                     'cluster 4': 'orange',
-                 },
-                 x_label='Count of Transactions (Log Scale)' if not use_tsne_axis else 'T-sne axis 1',
-                 y_label='Count of Distinct Dealers (Log Scale)' if not use_tsne_axis else 'T-sne axis 2',
-                 x_log=False if use_tsne_axis else True,
-                 y_log=False if use_tsne_axis else True,
-                 legend_size=20)
+    # Visual.spots(X, Y, new_labels, '',
+    #              # spot_size=3, save_path=utils.get_relative_dir('groups', f'group_{group_type}_tsne_axis.png'),
+    #              spot_size=3, save_path=utils.get_relative_dir('groups_dealer_prediction', file_name),
+    #              dict_label_2_color={
+    #                  'cluster 0': 'green',
+    #                  'cluster 1': 'red',
+    #                  'cluster 2': 'blue',
+    #                  'cluster 3': 'black',
+    #                  'cluster 4': 'orange',
+    #              },
+    #              x_label='Count of Transactions (Log Scale)' if not use_tsne_axis else 'T-sne axis 1',
+    #              y_label='Count of Distinct Dealers (Log Scale)' if not use_tsne_axis else 'T-sne axis 2',
+    #              x_log=False if use_tsne_axis else True,
+    #              y_log=False if use_tsne_axis else True,
+    #              legend_size=20)
+
+    print('\ndone')
