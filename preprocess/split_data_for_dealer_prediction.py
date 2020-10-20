@@ -1,10 +1,13 @@
 import os
-import numpy as np
-from config import path
-from lib import utils
+import sys
 
 __cur_dir = os.path.split(os.path.abspath(__file__))[0]
 __root_dir = os.path.split(__cur_dir)[0]
+sys.path.append(__root_dir)
+
+import numpy as np
+from config import path
+from lib import utils
 
 # config
 split_by_date = True
