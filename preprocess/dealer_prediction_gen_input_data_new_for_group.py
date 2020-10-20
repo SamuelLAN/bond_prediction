@@ -552,21 +552,22 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
 
 
 cluster_num = 4
+filtering_for_each_bond = 'no_filtering_axis_first_4400_bonds'
 group_type = f'k_means_cluster_{cluster_num}_feat_1_trace_count_2_volume_3_num_dealer_split_by_date'
-group_file_path = utils.get_relative_dir('groups_dealer_prediction', f'group_{group_type}.json')
+group_file_path = utils.get_relative_dir('groups_dealer_prediction', f'group_{group_type}_{filtering_for_each_bond}.json')
 
 trace_suffix = 'd_bonds_2015_split_by_date.json'
 param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
 # param_name = 'no_day_off_distinguish_buy_sell_use_transaction_count'
-group_index = 2
+group_index = 0
 get_all = False
 get_individual = False
 filtering_use_cache = True
 only_buy_y = False
 only_sell_y = False
 
-# input_windows = [5, 10, 15]
-input_windows = [5]
+input_windows = [5, 10, 15]
+# input_windows = [5]
 output_windows = [2]
 buy_sell_plan = 0
 with_day_off = False
