@@ -1,4 +1,10 @@
 import os
+import sys
+
+__cur_dir = os.path.split(os.path.abspath(__file__))[0]
+__root_dir = os.path.split(__cur_dir)[0]
+sys.path.append(__root_dir)
+
 import numpy as np
 from gensim import corpora
 # from matplotlib import pyplot as plt
