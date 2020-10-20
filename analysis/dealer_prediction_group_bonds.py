@@ -1,10 +1,10 @@
 import os
 import numpy as np
 from gensim import corpora
-from matplotlib import pyplot as plt
-from sklearn.metrics import jaccard_similarity_score
-from sklearn.metrics.pairwise import rbf_kernel
-from sklearn.metrics.pairwise import cosine_similarity
+# from matplotlib import pyplot as plt
+# from sklearn.metrics import jaccard_similarity_score
+# from sklearn.metrics.pairwise import rbf_kernel
+# from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import spectral_clustering, KMeans, SpectralClustering
 from config import path
 from lib import utils
