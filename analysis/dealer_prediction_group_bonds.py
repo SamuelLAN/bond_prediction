@@ -192,7 +192,7 @@ def __similarity(_points, use_bond_overlap=True, use_pattens=False):
 if __name__ == '__main__':
     d_bond_file_name = f'd_bonds_2015_split_by_date.json'
 
-    cluster_num = 5
+    cluster_num = 4
     group_type = f'k_means_cluster_{cluster_num}_feat_1_trace_count_2_volume_3_num_dealer_split_by_date'
     use_k_means = True
     use_spectral_clustering = False
@@ -286,7 +286,7 @@ if __name__ == '__main__':
         #         eco_labels.append(_tmp_label_val['core_peri_idb'])
 
         # save group information to file
-        utils.write_json(utils.get_relative_dir('groups_dealer_prediction', f'group_{group_type}.json'),
+        utils.write_json(utils.get_relative_dir('groups_dealer_prediction', f'group_{group_type}_{filtering_for_each_bond}.json'),
                          d_bonds_2_group)
 
         # Dimension reduction so that it can be visualized
