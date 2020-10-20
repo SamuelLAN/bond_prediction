@@ -18,8 +18,10 @@ TIME_DIR = time.strftime('%Y_%m_%d_%H_%M_%S')
 # TIME_DIR = '2020_04_17_17_37_12'
 IS_TRAIN = True
 
-__group_dir = r'D:\Data\share_mine_laptop\community_detection\data\input_data'
-__group_dir_dealer_prediction = r'D:\Data\share_mine_laptop\community_detection\data\input_data_dealer_prediction'
+DATA_ROOT_DIR = r'/fs/clip-scratch/yusenlin/data'
+
+__group_dir = os.path.join(DATA_ROOT_DIR, 'input_data')
+__group_dir_dealer_prediction = os.path.join(DATA_ROOT_DIR, 'input_data_dealer_prediction')
 # group_name = r'group_spectral_clustering_with_patterns_info_cluster_6_split_by_date'
 # group_name = 'group_k_means_cluster_3_split_by_date'
 # group_name = 'group_k_means_cluster_8_split_by_date'
