@@ -12,6 +12,7 @@ class Loader:
     random_state = 42
 
     def __init__(self, dir_path, buffer_size=8000, prefix='train', mask_freq=[]):
+        print(dir_path)
         assert os.path.exists(dir_path)
         self.__dir_path = dir_path
         self.__prefix = prefix
