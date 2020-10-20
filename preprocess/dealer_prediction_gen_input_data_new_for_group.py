@@ -1,8 +1,12 @@
 import os
-import copy
+
+import sys
 
 cur_path = os.path.split(os.path.abspath(__file__))[0]
+__root_dir = os.path.split(cur_path)[0]
+sys.path.append(__root_dir)
 
+import copy
 import numpy as np
 from gensim import corpora
 from six.moves import cPickle as pickle
@@ -554,7 +558,8 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
 cluster_num = 4
 filtering_for_each_bond = 'no_filtering_axis_first_4400_bonds'
 group_type = f'k_means_cluster_{cluster_num}_feat_1_trace_count_2_volume_3_num_dealer_split_by_date'
-group_file_path = utils.get_relative_dir('groups_dealer_prediction', f'group_{group_type}_{filtering_for_each_bond}.json')
+group_file_path = utils.get_relative_dir('groups_dealer_prediction',
+                                         f'group_{group_type}_{filtering_for_each_bond}.json')
 
 trace_suffix = 'd_bonds_2015_split_by_date.json'
 param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
