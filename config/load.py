@@ -31,7 +31,7 @@ group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count_onl
 group_param_name_dealer_prediction = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
 # group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count_only_buy_y'
 # group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
-group_file_name = 'group_2'
+group_file_name = 'group_0'
 group_path = os.path.join(__group_dir, group_name, group_param_name, group_file_name)
 group_path_dealer_prediction = os.path.join(__group_dir_dealer_prediction, group_name_dealer_prediction, group_param_name_dealer_prediction, group_file_name)
 
