@@ -436,17 +436,24 @@ class Decoder(layers.Layer):
 
         # end_pos = tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1)
 
-        print(f'end_pos:')
-        print(end_pos)
-        print('tf.one_hot(end_pos, self.__max_pos_len):')
-        print(tf.one_hot(end_pos, self.__max_pos_len))
-        print('tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1):')
-        print(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1))
-        # print(tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1))
-        exit()
+        if len(end_pos.shape) > 1:
+            end_pos = tf.squeeze(end_pos, axis=-1)
 
-        end_pos = tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1)
-        pos_embeddings = tf.expand_dims(tf.reduce_sum(self.pos_encoding[:, :self.__max_pos_len, :] * end_pos, axis=1), axis=1)
+        # print(f'end_pos:')
+        # print(end_pos.shape)
+        # print('tf.one_hot(end_pos, self.__max_pos_len):')
+        # print(tf.one_hot(end_pos, self.__max_pos_len).shape)
+        # print('tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1):')
+        # print(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1).shape)
+        # # print('tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1)：')
+        # # print(tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1).shape)
+        #
+        # exit()
+
+        end_pos = tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1)
+        # end_pos = tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1)
+        pos_embeddings = tf.expand_dims(tf.reduce_sum(self.pos_encoding[:, :self.__max_pos_len, :] * end_pos, axis=1),
+                                        axis=1)
         x += pos_embeddings
 
         # x += self.pos_encoding[:, :seq_len, :]
@@ -460,9 +467,9 @@ class Decoder(layers.Layer):
         out2_list = []
         for i in range(self.num_layers):
             x, block1, block2, out1, out2 = self.dec_layers[i](x, enc_output, training,
-            # j = 0 if i == 0 else 1
-            # x, block1, block2 = self.dec_layers[j](x, enc_output, training,
-                                                   look_ahead_mask, padding_mask)
+                                                               # j = 0 if i == 0 else 1
+                                                               # x, block1, block2 = self.dec_layers[j](x, enc_output, training,
+                                                               look_ahead_mask, padding_mask)
             attention_weights['decoder_layer{}_block1'.format(i + 1)] = block1
             attention_weights['decoder_layer{}_block2'.format(i + 1)] = block2
             out1_list.append(out1)
@@ -485,7 +492,8 @@ class Transformer(keras.Model):
         encoder_emb_layer = self.encoder.embedding if share_embeddings else None
         with tf.name_scope('Decoder'):
             self.decoder = Decoder(num_layers, d_model, num_heads, d_ff,
-                                   target_vocab_size, max_pe_input, drop_rate, use_embeddings, encoder_emb_layer, zero_initial)
+                                   target_vocab_size, max_pe_input, drop_rate, use_embeddings, encoder_emb_layer,
+                                   zero_initial)
 
         self.final_layer = layers.Dense(target_vocab_size, activation='tanh')
 
@@ -508,8 +516,6 @@ class Transformer(keras.Model):
 
     def call(self, inputs, training=None, get_more=False):
         inp, tar, end_pos = inputs
-
-        print(f'call model end pos shape: {end_pos.shape}')
 
         # tar = tf.reshape(tar, [tar.shape[0], 1, tar.shape[-1]])
         enc_padding_mask, look_ahead_mask, dec_padding_mask = self.__create_masks(inp, tar)
