@@ -436,8 +436,11 @@ class Decoder(layers.Layer):
 
         # end_pos = tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1)
 
+        print(f'end_pos:')
         print(end_pos)
+        print('tf.one_hot(end_pos, self.__max_pos_len):')
         print(tf.one_hot(end_pos, self.__max_pos_len))
+        print('tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1):')
         print(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1))
         # print(tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1))
         exit()
@@ -505,6 +508,8 @@ class Transformer(keras.Model):
 
     def call(self, inputs, training=None, get_more=False):
         inp, tar, end_pos = inputs
+
+        print(f'call model end pos shape: {end_pos.shape}')
 
         # tar = tf.reshape(tar, [tar.shape[0], 1, tar.shape[-1]])
         enc_padding_mask, look_ahead_mask, dec_padding_mask = self.__create_masks(inp, tar)

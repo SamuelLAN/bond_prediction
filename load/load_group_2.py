@@ -95,9 +95,11 @@ class Loader:
 
     @staticmethod
     def __calculate_last_pos(x):
+        print(f'calculate last pos (before) shape: {x.shape}')
         x = np.sum(x, axis=-1)
         x[x > 0] = 1
         x = np.sum(x, axis=-1)
+        print(f'calculate last pos (after) shape: {x.shape}')
         return x
 
     def generator(self, batch_size):

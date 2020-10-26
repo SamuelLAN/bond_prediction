@@ -231,6 +231,12 @@ class NN:
             # The returned value may be useful in the future
             batch_size = self.params['batch_size'] if not isinstance(train_x, types.GeneratorType) else None
             steps_per_epoch = None if not isinstance(train_x, types.GeneratorType) else self.__steps_per_epoch
+
+            x, y = next(train_x)
+            a, b, c = x
+
+            print(f'before train end pos shape: {c.shape}')
+
             history_object = self.model.fit(train_x, train_y_one_hot,
                                             epochs=self.params['epoch'],
                                             batch_size=batch_size,
