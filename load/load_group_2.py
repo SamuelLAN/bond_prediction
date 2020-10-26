@@ -115,13 +115,14 @@ class Loader:
             self.__data = self.__data[batch_size:]
             yield (X_mask, decode_input, end_pos), Y
 
-    def all(self):
+    def all(self, ratio=1.0):
         if self.__has_load_all:
             return self.__X, self.__y
 
         print(f'Loading all data from {self.__dir_path} ...')
 
-        for i, file_path in enumerate(self.__file_list):
+        length = int(len(self.__file_list) * ratio)
+        for i, file_path in enumerate(self.__file_list[:length]):
             if i % 2 == 0:
                 progress = float(i + 1) / self.__len_files * 100.
                 print('\rprogress: %.2f%% ' % progress, end='')

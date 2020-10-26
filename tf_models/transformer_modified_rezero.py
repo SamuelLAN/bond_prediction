@@ -436,11 +436,11 @@ class Decoder(layers.Layer):
 
         # end_pos = tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1)
 
-        print(end_pos)
-        print(tf.one_hot(end_pos, self.__max_pos_len))
-        print(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1))
-        print(tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1))
-        exit()
+        # print(end_pos)
+        # print(tf.one_hot(end_pos, self.__max_pos_len))
+        # print(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1))
+        # print(tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1))
+        # exit()
 
         end_pos = tf.squeeze(tf.expand_dims(tf.one_hot(end_pos, self.__max_pos_len), axis=-1), axis=1)
         pos_embeddings = tf.expand_dims(tf.reduce_sum(self.pos_encoding[:, :self.__max_pos_len, :] * end_pos, axis=1), axis=1)

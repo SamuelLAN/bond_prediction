@@ -73,7 +73,7 @@ class Train:
             self.__train_load.start()
             self.__X_train = self.__train_load.generator(Model.params['batch_size'])
             self.__y_train = None
-            self.__X_test, self.__y_test = self.__test_load.all()
+            self.__X_test, self.__y_test = self.__test_load.all(0.05)
             self.__input_dim = self.__train_load.input_dim()
             self.__train_size = self.__train_load.size()
 
