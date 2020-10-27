@@ -56,7 +56,7 @@ class Train:
 
         # initialize data instances
         # print(group_path)
-        self.__train_load = Loader(group_path_dealer_prediction, buffer_size=20000, prefix='train',
+        self.__train_load = Loader(group_path_dealer_prediction, buffer_size=2000, prefix='train',
                                    # mask_freq=[group_index, freq_level]
                                    )
         self.__test_load = Loader(group_path_dealer_prediction, prefix='test',
