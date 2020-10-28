@@ -9,6 +9,8 @@ DATA_ROOT_DIR = r'/fs/clip-scratch/yusenlin/data'
 # the directory that save the bond transaction data
 TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'pkl')
 
+CACHE_DIR = os.path.join(DATA_ROOT_DIR, 'cache')
+
 # the dict the map the bond_id/bond_index to bond_index/bond_id
 DICT_BOND_ID_2_INDEX_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_id_2_index.json')
 DICT_BOND_INDEX_2_ID_JSON = os.path.join(DATA_ROOT_DIR, 'dict_bond_index_2_id.json')
