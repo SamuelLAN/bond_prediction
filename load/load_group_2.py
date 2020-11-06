@@ -115,6 +115,16 @@ class Loader:
             self.__data = self.__data[batch_size:]
             yield (X_mask, decode_input, end_pos), Y
 
+    def one(self):
+        data = self.__data[: 1]
+        X_mask, Y = zip(*data)
+        X_mask = np.array(X_mask)
+        Y = np.array(Y)
+        decode_input = X_mask[:, :1]
+        end_pos = self.__calculate_last_pos(X_mask)
+
+        return (X_mask, decode_input, end_pos), Y
+
     def all(self, ratio=1.0):
         if self.__has_load_all:
             return self.__X, self.__y
@@ -228,7 +238,6 @@ class Loader:
         print(f'input_length: {self.input_length()}')
         print(f'voc_size: {self.input_dim()}')
         print('----------------------------\n')
-
 
 # group_name = 'all'
 # group_path = r'D:\Data\share_mine_laptop\community_detection\data\input_data\group_k_means_split_by_date\no_day_off_no_distinguish_buy_sell_use_transaction_count'

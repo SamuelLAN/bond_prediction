@@ -18,6 +18,7 @@ TIME_DIR = time.strftime('%Y_%m_%d_%H_%M_%S')
 # TIME_DIR = '2020_04_17_17_37_12'
 IS_TRAIN = True
 
+# DATA_ROOT_DIR = r'D:\Data\share_mine_laptop\community_detection\data'
 DATA_ROOT_DIR = r'/fs/clip-scratch/yusenlin/data'
 
 __group_dir = os.path.join(DATA_ROOT_DIR, 'input_data')
@@ -33,7 +34,7 @@ group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count_onl
 group_param_name_dealer_prediction = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
 # group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count_only_buy_y'
 # group_param_name = 'no_day_off_no_distinguish_buy_sell_use_transaction_count'
-group_file_name = 'group_0'
+group_file_name = 'group_1'
 group_path = os.path.join(__group_dir, group_name, group_param_name, group_file_name)
 group_path_dealer_prediction = os.path.join(__group_dir_dealer_prediction, group_name_dealer_prediction, group_param_name_dealer_prediction, group_file_name)
 
