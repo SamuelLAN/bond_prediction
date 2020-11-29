@@ -28,7 +28,8 @@ __CUR_DIR = os.path.abspath(os.path.split(__file__)[0])
 ROOT_DIR = os.path.split(__CUR_DIR)[0]
 
 # directory for saving the runtime files
-__RUNTIME_DIR = os.path.join(ROOT_DIR, 'runtime')
+# __RUNTIME_DIR = os.path.join(ROOT_DIR, 'runtime')
+__RUNTIME_DIR = r'/fs/clip-scratch/yusenlin/data/runtime/bond_prediction'
 
 # directory for saving models
 __PATH_MODEL_DIR = os.path.join(__RUNTIME_DIR, 'models')
