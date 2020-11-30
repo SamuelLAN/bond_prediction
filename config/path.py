@@ -28,24 +28,24 @@ __CUR_DIR = os.path.abspath(os.path.split(__file__)[0])
 ROOT_DIR = os.path.split(__CUR_DIR)[0]
 
 # directory for saving the runtime files
-# __RUNTIME_DIR = os.path.join(ROOT_DIR, 'runtime')
-__RUNTIME_DIR = r'/fs/clip-scratch/yusenlin/data/runtime/bond_prediction'
+# RUNTIME_DIR = os.path.join(ROOT_DIR, 'runtime')
+RUNTIME_DIR = r'/fs/clip-scratch/yusenlin/runtime/bond_prediction'
 
 # directory for saving models
-__PATH_MODEL_DIR = os.path.join(__RUNTIME_DIR, 'models')
+__PATH_MODEL_DIR = os.path.join(RUNTIME_DIR, 'models')
 PATH_MODEL_DIR = os.path.join(__PATH_MODEL_DIR, MODEL_NAME)
 
 # directory for saving the tensorboard log files
-__PATH_BOARD_DIR = os.path.join(__RUNTIME_DIR, 'tensorboard')
+__PATH_BOARD_DIR = os.path.join(RUNTIME_DIR, 'tensorboard')
 PATH_BOARD_DIR = os.path.join(__PATH_BOARD_DIR, MODEL_NAME)
 
-PATH_TMP_DIR = os.path.join(__RUNTIME_DIR, 'tmp')
+PATH_TMP_DIR = os.path.join(RUNTIME_DIR, 'tmp')
 
 # the log file path, record all the models results and params
-PATH_MODEL_LOG = os.path.join(__RUNTIME_DIR, 'model.log')
-PATH_MODEL_LOG_DEALER = os.path.join(__RUNTIME_DIR, 'model_for_dealer_prediction.log')
-PATH_CSV_LOG = os.path.join(__RUNTIME_DIR, 'experiments.csv')
-PATH_CSV_LOG_DEALER = os.path.join(__RUNTIME_DIR, 'experiments_for_dealer_prediction.csv')
+PATH_MODEL_LOG = os.path.join(RUNTIME_DIR, 'model.log')
+PATH_MODEL_LOG_DEALER = os.path.join(RUNTIME_DIR, 'model_for_dealer_prediction.log')
+PATH_CSV_LOG = os.path.join(RUNTIME_DIR, 'experiments.csv')
+PATH_CSV_LOG_DEALER = os.path.join(RUNTIME_DIR, 'experiments_for_dealer_prediction.csv')
 
 
 def mkdir_time(upper_path, _time):
@@ -66,7 +66,7 @@ def mk_if_not_exist(dir_path_list):
 mk_if_not_exist([
     D_DEALERS_TRACE_DIR,
     D_BONDS_TRACE_DIR,
-    __RUNTIME_DIR,
+    RUNTIME_DIR,
     __PATH_MODEL_DIR,
     PATH_MODEL_DIR,
     __PATH_BOARD_DIR,
