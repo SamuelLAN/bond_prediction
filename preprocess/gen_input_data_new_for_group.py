@@ -239,7 +239,7 @@ def get_x_y_for_one_dealer(traces, dictionary, _input_windows, _output_windows, 
 def load_d_dealers_after_filtering(_trace_suffix, use_cache=True):
     print('\nloading d_dealers_2_traces ... ')
 
-    cache_path = utils.get_relative_dir('runtime', 'cache', 'filtered_d_dealers.pkl')
+    cache_path = utils.get_relative_dir('cache', 'filtered_d_dealers.pkl', root=path.RUNTIME_DIR)
     if os.path.exists(cache_path) and use_cache:
         return utils.load_pkl(cache_path)
 
@@ -338,9 +338,9 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
     train_d_dealers, test_d_dealers = load_d_dealers_after_filtering(_trace_suffix, use_cache=use_cache)
 
     d_bond_id_2_freq_type_by_count = utils.load_json(utils.get_relative_dir(
-        'runtime', 'cache', 'd_bond_id_2_freq_type_by_count.json'))
+        'cache', 'd_bond_id_2_freq_type_by_count.json', root=path.RUNTIME_DIR))
     d_bond_id_2_freq_type_by_volume = utils.load_json(utils.get_relative_dir(
-        'runtime', 'cache', 'd_bond_id_2_freq_type_by_volume.json'))
+        'cache', 'd_bond_id_2_freq_type_by_volume.json', root=path.RUNTIME_DIR))
 
     # calculate the number of group members
     if not _get_all and not _get_individual:

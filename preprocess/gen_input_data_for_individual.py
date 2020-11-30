@@ -124,7 +124,7 @@ def gen_inputs(group_file_path, group_index, input_time_steps_list, output_time_
     # d_dealer_index_2_trace_list = utils.load_pkl(os.path.join(path.ROOT_DIR, 'runtime', 'tmp_d_dealers.pkl'))
 
     d_dealer_for_gen_input = utils.load_pkl(
-        os.path.join(path.ROOT_DIR, 'runtime', 'd_dealer_for_gen_input_with_no_below_50_25_10.pkl'))
+        os.path.join(path.RUNTIME_DIR, 'd_dealer_for_gen_input_with_no_below_50_25_10.pkl'))
 
     _individual_index = ''
     if isinstance(group_index, int):

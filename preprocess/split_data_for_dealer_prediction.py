@@ -42,12 +42,12 @@ def load_data(_use_cache=True):
         }
     """
 
-    cache_path = utils.get_relative_dir('runtime', 'cache', 'dict_bonds_trace_2015.json')
+    cache_path = utils.get_relative_dir('cache', 'dict_bonds_trace_2015.json', root=path.RUNTIME_DIR)
     if _use_cache and os.path.exists(cache_path):
         return utils.load_json(cache_path)
 
     # load all finra trace data in 2015
-    path_pkl_2015 = os.path.join(path.TRACE_DIR, 'finra_trace_2015.pkl')
+    path_pkl_2015 = os.path.join(path.TRACE_DIR, 'FINRA_TRACE_2015.pkl')
     _data = utils.load_pkl(path_pkl_2015)
 
     print('formatting data ...')

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from lib import utils
+from config import path
 
 group_path = utils.get_relative_file('groups', 'group_k_means_split_by_date.json')
 groups = utils.load_json(group_path)
@@ -15,7 +16,7 @@ def get_name(_eco_label):
         return 'IDB'
 
 
-data = np.array(pd.read_csv(utils.get_relative_file('runtime', 'TRACE_cluster_lag.csv')))
+data = np.array(pd.read_csv(utils.get_relative_file('TRACE_cluster_lag.csv', root=path.RUNTIME_DIR)))
 data = data[:, 1:4]
 
 d = {}
@@ -56,7 +57,7 @@ for _id, val in d.items():
         'core_peri_idb': name,
     }
 
-utils.write_json(utils.get_relative_file('runtime', 'd_dealer_index_2_eco_label.json'), new_d_id_2_eco_label)
+utils.write_json(utils.get_relative_file('d_dealer_index_2_eco_label.json', root=path.RUNTIME_DIR), new_d_id_2_eco_label)
 exit()
 
 for k, v in groups.items():

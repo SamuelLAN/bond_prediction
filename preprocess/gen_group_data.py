@@ -8,9 +8,9 @@ def gen_group_according_to(file_path):
     dict_dealer_index_2_group = utils.load_json(file_path)
 
     data, d_dealers, total_volume, total_transaction_count, bound_timestamp, d_new_bonds = utils.load_pkl(
-        os.path.join(path.ROOT_DIR, 'runtime', 'tmp123.pkl'))
+        os.path.join(path.RUNTIME_DIR, 'tmp123.pkl'))
 
-    utils.write_pkl(os.path.join(path.ROOT_DIR, 'runtime', 'tmp_d_dealers.pkl'), d_dealers)
+    utils.write_pkl(os.path.join(path.RUNTIME_DIR, 'tmp_d_dealers.pkl'), d_dealers)
     # d_dealers = utils.load_pkl(os.path.join(path.ROOT_DIR, 'runtime', 'tmp_d_dealers.pkl'))
 
     labels = set(list(map(lambda x: x[1], dict_dealer_index_2_group.items())))

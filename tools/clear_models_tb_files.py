@@ -1,11 +1,12 @@
 import os
 import shutil
 from lib import utils
+from config import path
 
 save_best_model_num = 1
 
-model_dir = utils.get_relative_dir('runtime', 'models')
-tb_dir = utils.get_relative_dir('runtime', 'tensorboard')
+model_dir = utils.get_relative_dir('models', root=path.RUNTIME_DIR)
+tb_dir = utils.get_relative_dir('tensorboard', root=path.RUNTIME_DIR)
 
 for model_name in os.listdir(model_dir):
     tmp_model_dir = os.path.join(model_dir, model_name)

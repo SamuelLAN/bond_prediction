@@ -39,7 +39,7 @@ def load_data(_use_cache=True):
         }
     """
 
-    cache_path = utils.get_relative_dir('runtime', 'cache', 'dict_dealers_trace_2015.json')
+    cache_path = utils.get_relative_dir('cache', 'dict_dealers_trace_2015.json', root=path.RUNTIME_DIR)
     if _use_cache and os.path.exists(cache_path):
         return utils.load_json(cache_path)
 

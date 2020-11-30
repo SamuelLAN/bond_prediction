@@ -18,7 +18,7 @@ class Loader:
 
         self.__mask = None
         if mask_freq:
-            _path_mask = utils.get_relative_dir('runtime', 'cache', f'group_{mask_freq[0]}_mask.pkl')
+            _path_mask = utils.get_relative_dir('cache', f'group_{mask_freq[0]}_mask.pkl', root=path.RUNTIME_DIR)
             masks = utils.load_pkl(_path_mask)
             _mask = masks[mask_freq[1]]
             self.__mask = np.expand_dims(_mask, axis=0)
