@@ -3,8 +3,8 @@ from config.load import MODEL_NAME
 
 # ------------------------------------ data ------------------------------------------
 
-# DATA_ROOT_DIR = r'D:\Data\share_mine_laptop\community_detection\data'
-DATA_ROOT_DIR = r'/fs/clip-scratch/yusenlin/data'
+DATA_ROOT_DIR = r'D:\Data\share_mine_laptop\community_detection\data'
+# DATA_ROOT_DIR = r'/fs/clip-scratch/yusenlin/data'
 
 # the directory that save the bond transaction data
 TRACE_DIR = os.path.join(DATA_ROOT_DIR, 'pkl')
@@ -28,8 +28,8 @@ __CUR_DIR = os.path.abspath(os.path.split(__file__)[0])
 ROOT_DIR = os.path.split(__CUR_DIR)[0]
 
 # directory for saving the runtime files
-# RUNTIME_DIR = os.path.join(ROOT_DIR, 'runtime')
-RUNTIME_DIR = r'/fs/clip-scratch/yusenlin/runtime/bond_prediction'
+RUNTIME_DIR = os.path.join(ROOT_DIR, 'runtime')
+# RUNTIME_DIR = r'/fs/clip-scratch/yusenlin/runtime/bond_prediction'
 
 # directory for saving models
 __PATH_MODEL_DIR = os.path.join(RUNTIME_DIR, 'models')

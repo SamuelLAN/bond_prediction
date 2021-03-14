@@ -335,12 +335,12 @@ def gen_inputs(_group_file_path, _group_index, _trace_suffix, input_time_steps_l
     d_dealer_index_2_group_label = utils.load_json(_group_file_path)
 
     # load d dealers and filter traces and bonds whose freq is low
-    train_d_dealers, test_d_dealers = load_d_dealers_after_filtering(_trace_suffix, use_cache=use_cache)
+    train_d_dealers, test_d_dealers = load_d_dealers_after_filtering(_trace_suffix, use_cache=True)
 
-    d_bond_id_2_freq_type_by_count = utils.load_json(utils.get_relative_dir(
-        'cache', 'd_bond_id_2_freq_type_by_count.json', root=path.RUNTIME_DIR))
-    d_bond_id_2_freq_type_by_volume = utils.load_json(utils.get_relative_dir(
-        'cache', 'd_bond_id_2_freq_type_by_volume.json', root=path.RUNTIME_DIR))
+    # d_bond_id_2_freq_type_by_count = utils.load_json(utils.get_relative_dir(
+    #     'cache', 'd_bond_id_2_freq_type_by_count.json', root=path.RUNTIME_DIR))
+    # d_bond_id_2_freq_type_by_volume = utils.load_json(utils.get_relative_dir(
+    #     'cache', 'd_bond_id_2_freq_type_by_volume.json', root=path.RUNTIME_DIR))
 
     # calculate the number of group members
     if not _get_all and not _get_individual:

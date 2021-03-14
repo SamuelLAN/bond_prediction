@@ -590,3 +590,5 @@ gen_inputs(group_file_path, group_index, trace_suffix, input_windows, output_win
            with_day_off, buy_sell_plan, use_volume,
            save_path=save_file_path, _get_all=get_all, _get_individual=get_individual, use_cache=filtering_use_cache,
            only_buy_y=only_buy_y, only_sell_y=only_sell_y)
+
+print('\ndone')
